@@ -1,0 +1,55 @@
+{
+  "name": "dev-env-helper",
+  "displayName": "Dev Environment Helper",
+  "description": "A VS Code extension to help make developers' life easier",
+  "version": "0.0.1",
+  "publisher": "jimseiwert",
+  "author": {
+    "name": "Jim Seiwert"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jimseiwert/dev-env-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jimseiwert/dev-env-extension/issues"
+  },
+  "homepage": "https://github.com/jimseiwert/dev-env-extension#readme",
+  "keywords": [
+    "developer",
+    "productivity",
+    "tools",
+    "environment"
+  ],
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "icon": "icon.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dev-env-helper.helloWorld",
+        "title": "Hello World"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4",
+    "vsce": "^2.15.0"
+  }
+}

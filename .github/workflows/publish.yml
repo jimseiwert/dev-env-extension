@@ -1,0 +1,49 @@
+name: Publish Extension
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (leave empty for current version)'
+        required: false
+        default: ''
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Compile TypeScript
+      run: npm run compile
+
+    - name: Update version (if specified)
+      if: github.event.inputs.version != ''
+      run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+    - name: Package Extension
+      run: npm run package
+
+    - name: Publish to VS Code Marketplace
+      run: npm run publish
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+    - name: Upload VSIX as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension-vsix
+        path: '*.vsix'

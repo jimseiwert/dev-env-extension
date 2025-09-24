@@ -1,0 +1,39 @@
+{
+	"name": "Node.js & TypeScript",
+	"image": "mcr.microsoft.com/devcontainers/typescript-node:22-bullseye",
+	"features": {
+		"ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"moby": true,
+			"dockerDashComposeVersion": "v2"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"github.copilot",
+				"github.copilot-chat",
+				"bradlc.vscode-tailwindcss",
+				"kalimahapps.tailwind-config-viewer",
+				"streetsidesoftware.code-spell-checker",
+				"cweijan.vscode-postgresql-client2",
+				"ms-azuretools.vscode-docker",
+				"humao.rest-client",
+				"ms-vscode-remote.remote-containers",
+				"redhat.vscode-yaml",
+				"ms-vscode.vscode-json",
+				"esbenp.prettier-vscode",
+				"dbaeumer.vscode-eslint",
+				"ms-vscode.vscode-typescript-next",
+				"ms-vscode-remote.remote-ssh",
+				"github.vscode-github-actions"
+			]
+		}
+	},
+	"forwardPorts": [3000, 3001, 80],
+	"mounts": [
+		"source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached",
+		"source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,consistency=cached",
+		"source=${localEnv:HOME}/.claude.json,target=/root/.claude.json,type=bind,consistency=cached"
+	]
+}
