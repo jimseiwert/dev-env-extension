@@ -26,7 +26,8 @@
 				"dbaeumer.vscode-eslint",
 				"ms-vscode.vscode-typescript-next",
 				"ms-vscode-remote.remote-ssh",
-				"github.vscode-github-actions"
+				"github.vscode-github-actions",
+				"jimseiwert.devorb"
 			]
 		}
 	},
