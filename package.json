@@ -1,6 +1,6 @@
 {
-  "name": "devmind",
-  "displayName": "DevMind",
+  "name": "devorb",
+  "displayName": "DevOrb",
   "description": "Your dev environment remembers across machines - sync Claude Code, GitHub Copilot, and environment configs",
   "version": "0.0.1",
   "publisher": "jimseiwert",
@@ -10,12 +10,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jimseiwert/devmind.git"
+    "url": "https://github.com/jimseiwert/devorb.git"
   },
   "bugs": {
-    "url": "https://github.com/jimseiwert/devmind/issues"
+    "url": "https://github.com/jimseiwert/devorb/issues"
   },
-  "homepage": "https://github.com/jimseiwert/devmind#readme",
+  "homepage": "https://github.com/jimseiwert/devorb#readme",
   "keywords": [
     "developer",
     "productivity",
@@ -39,103 +39,103 @@
   "contributes": {
     "commands": [
       {
-        "command": "devMind.syncNow",
-        "title": "DevMind: Sync Now",
+        "command": "devOrb.syncNow",
+        "title": "DevOrb: Sync Now",
         "icon": "$(sync)"
       },
       {
-        "command": "devMind.showStatus",
-        "title": "DevMind: Show Status",
+        "command": "devOrb.showStatus",
+        "title": "DevOrb: Show Status",
         "icon": "$(info)"
       },
       {
-        "command": "devMind.openSettings",
-        "title": "DevMind: Open Settings",
+        "command": "devOrb.openSettings",
+        "title": "DevOrb: Open Settings",
         "icon": "$(gear)"
       },
       {
-        "command": "devMind.refreshEnvironment",
+        "command": "devOrb.refreshEnvironment",
         "title": "Refresh Environment Variables",
         "icon": "$(refresh)"
       },
       {
-        "command": "devMind.syncAllEnvironment",
+        "command": "devOrb.syncAllEnvironment",
         "title": "Sync All Environment Variables",
         "icon": "$(sync)"
       },
       {
-        "command": "devMind.syncEnvironmentVariable",
+        "command": "devOrb.syncEnvironmentVariable",
         "title": "Sync Variable",
         "icon": "$(cloud-upload)"
       },
       {
-        "command": "devMind.addRemoteSecretToLocal",
+        "command": "devOrb.addRemoteSecretToLocal",
         "title": "Add to Local .env",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "devMind.downloadSecretToEnv",
+        "command": "devOrb.downloadSecretToEnv",
         "title": "Download to .env",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "devMind.downloadSecretToAllEnv",
+        "command": "devOrb.downloadSecretToAllEnv",
         "title": "Download to All .env Files",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "devMind.addMissingSecretToFile",
+        "command": "devOrb.addMissingSecretToFile",
         "title": "Add to File",
         "icon": "$(add)"
       },
       {
-        "command": "devMind.uploadSecretToGitHub",
+        "command": "devOrb.uploadSecretToGitHub",
         "title": "Upload to GitHub",
         "icon": "$(cloud-upload)"
       },
       {
-        "command": "devMind.removeSecretFromFile",
+        "command": "devOrb.removeSecretFromFile",
         "title": "Remove from File",
         "icon": "$(trash)"
       },
       {
-        "command": "devMind.syncAllSecretsForFile",
+        "command": "devOrb.syncAllSecretsForFile",
         "title": "Sync All Secrets",
         "icon": "$(sync)"
       },
       {
-        "command": "devMind.resolveSecretConflict",
+        "command": "devOrb.resolveSecretConflict",
         "title": "Resolve Conflict",
         "icon": "$(git-merge)"
       },
       {
-        "command": "devMind.signUp1Password",
+        "command": "devOrb.signUp1Password",
         "title": "Sign Up for 1Password",
         "icon": "$(globe)"
       },
       {
-        "command": "devMind.setup1Password",
-        "title": "DevMind: Setup 1Password Integration",
+        "command": "devOrb.setup1Password",
+        "title": "DevOrb: Setup 1Password Integration",
         "icon": "$(settings-gear)"
       },
       {
-        "command": "devMind.setServiceAccountToken",
-        "title": "DevMind: Set 1Password Service Account Token",
+        "command": "devOrb.setServiceAccountToken",
+        "title": "DevOrb: Set 1Password Service Account Token",
         "icon": "$(key)"
       },
       {
-        "command": "devMind.clearServiceAccountToken",
-        "title": "DevMind: Clear 1Password Service Account Token",
+        "command": "devOrb.clearServiceAccountToken",
+        "title": "DevOrb: Clear 1Password Service Account Token",
         "icon": "$(trash)"
       },
       {
-        "command": "devMind.selectVault",
-        "title": "DevMind: Select 1Password Vault",
+        "command": "devOrb.selectVault",
+        "title": "DevOrb: Select 1Password Vault",
         "icon": "$(database)"
       },
       {
-        "command": "devMind.testAutoSync",
-        "title": "DevMind: Test Auto-Sync (Debug)",
+        "command": "devOrb.testAutoSync",
+        "title": "DevOrb: Test Auto-Sync (Debug)",
         "icon": "$(debug)"
       }
     ],
@@ -143,232 +143,232 @@
       {
         "title": "General",
         "properties": {
-          "devMind.enabled": {
+          "devOrb.enabled": {
             "type": "boolean",
             "default": true,
-            "description": "Enable DevMind"
+            "description": "Enable DevOrb"
           },
-          "devMind.autoSync": {
+          "devOrb.autoSync": {
             "type": "boolean",
             "default": true,
             "description": "Automatically sync when files change",
-            "enablement": "config.devMind.enabled"
+            "enablement": "config.devOrb.enabled"
           }
         }
       },
       {
         "title": "Claude Code",
         "properties": {
-          "devMind.claude.enabled": {
+          "devOrb.claude.enabled": {
             "type": "boolean",
             "default": true,
             "description": "Enable Claude configuration sync across machines",
-            "enablement": "config.devMind.enabled"
+            "enablement": "config.devOrb.enabled"
           },
-          "devMind.claude.gists.settings": {
+          "devOrb.claude.gists.settings": {
             "type": "string",
             "description": "GitHub Gist ID for Claude settings sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.gists.agents": {
+          "devOrb.claude.gists.agents": {
             "type": "string",
             "description": "GitHub Gist ID for Claude subagents and hooks sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.gists.commands": {
+          "devOrb.claude.gists.commands": {
             "type": "string",
             "description": "GitHub Gist ID for Claude slash commands sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.gists.plugins": {
+          "devOrb.claude.gists.plugins": {
             "type": "string",
             "description": "GitHub Gist ID for Claude plugins sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.gists.projects": {
+          "devOrb.claude.gists.projects": {
             "type": "string",
             "description": "GitHub Gist ID for CLAUDE.md project files sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.syncInterval": {
+          "devOrb.claude.syncInterval": {
             "type": "number",
             "default": 30,
             "description": "Sync interval in minutes",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.syncItems.settings": {
+          "devOrb.claude.syncItems.settings": {
             "type": "boolean",
             "default": true,
             "description": "Sync Claude settings.json",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.syncItems.subagents": {
+          "devOrb.claude.syncItems.subagents": {
             "type": "boolean",
             "default": true,
             "description": "Sync Claude subagents.json",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.syncItems.hooks": {
+          "devOrb.claude.syncItems.hooks": {
             "type": "boolean",
             "default": true,
             "description": "Sync Claude hooks.json",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.syncItems.slashCommands": {
+          "devOrb.claude.syncItems.slashCommands": {
             "type": "boolean",
             "default": true,
             "description": "Sync custom slash commands",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.syncItems.plugins": {
+          "devOrb.claude.syncItems.plugins": {
             "type": "boolean",
             "default": true,
             "description": "Sync plugin configurations",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           },
-          "devMind.claude.syncItems.claudeMd": {
+          "devOrb.claude.syncItems.claudeMd": {
             "type": "boolean",
             "default": false,
             "description": "Sync CLAUDE.md project files",
-            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
           }
         }
       },
       {
         "title": "GitHub Copilot",
         "properties": {
-          "devMind.copilot.enabled": {
+          "devOrb.copilot.enabled": {
             "type": "boolean",
             "default": true,
             "description": "Enable GitHub Copilot configuration sync across machines",
-            "enablement": "config.devMind.enabled"
+            "enablement": "config.devOrb.enabled"
           },
-          "devMind.copilot.gists.instructions": {
+          "devOrb.copilot.gists.instructions": {
             "type": "string",
             "description": "GitHub Gist ID for Copilot instructions sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.gists.prompts": {
+          "devOrb.copilot.gists.prompts": {
             "type": "string",
             "description": "GitHub Gist ID for Copilot prompt files sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.gists.settings": {
+          "devOrb.copilot.gists.settings": {
             "type": "string",
             "description": "GitHub Gist ID for Copilot extension settings sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.gists.history": {
+          "devOrb.copilot.gists.history": {
             "type": "string",
             "description": "GitHub Gist ID for Copilot chat history sync (auto-generated)",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.autoSync": {
+          "devOrb.copilot.autoSync": {
             "type": "boolean",
             "default": true,
             "description": "Automatically sync Copilot settings when they change",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.syncInterval": {
+          "devOrb.copilot.syncInterval": {
             "type": "number",
             "default": 30,
             "description": "Copilot sync interval in minutes",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.syncItems.personalInstructions": {
+          "devOrb.copilot.syncItems.personalInstructions": {
             "type": "boolean",
             "default": true,
             "description": "Sync personal custom instructions for Copilot Chat",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.syncItems.orgInstructions": {
+          "devOrb.copilot.syncItems.orgInstructions": {
             "type": "boolean",
             "default": true,
             "description": "Sync organization custom instructions for Copilot Chat",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.syncItems.promptFiles": {
+          "devOrb.copilot.syncItems.promptFiles": {
             "type": "boolean",
             "default": true,
             "description": "Sync .copilot-instructions.md and other prompt files",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.syncItems.chatHistory": {
+          "devOrb.copilot.syncItems.chatHistory": {
             "type": "boolean",
             "default": false,
             "description": "Sync Copilot Chat conversation history",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.syncItems.extensionSettings": {
+          "devOrb.copilot.syncItems.extensionSettings": {
             "type": "boolean",
             "default": true,
             "description": "Sync Copilot extension preferences and settings",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           },
-          "devMind.copilot.syncItems.shortcuts": {
+          "devOrb.copilot.syncItems.shortcuts": {
             "type": "boolean",
             "default": true,
             "description": "Sync Copilot keyboard shortcuts and commands",
-            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
           }
         }
       },
       {
         "title": "Environment Variables",
         "properties": {
-          "devMind.env.enabled": {
+          "devOrb.env.enabled": {
             "type": "boolean",
             "default": true,
             "description": "Enable environment variable syncing via 1Password",
-            "enablement": "config.devMind.enabled"
+            "enablement": "config.devOrb.enabled"
           },
-          "devMind.env.onePassword.serviceAccountToken": {
+          "devOrb.env.onePassword.serviceAccountToken": {
             "type": "string",
             "markdownDescription": "🔐 **1Password Service Account Token** (starts with `ops_`)\n\n📝 **How to use:** Paste your token here and save settings. It will be automatically moved to secure storage and this field will be cleared.\n\n🔗 **Get a token:** Create a Service Account at [1Password Developer Console](https://developer.1password.com/docs/service-accounts/)",
             "default": "",
             "pattern": "^(ops_.*|)$",
             "patternErrorMessage": "Service Account Token must start with 'ops_' or be empty",
-            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
           },
-          "devMind.env.onePassword.tokenStatus": {
+          "devOrb.env.onePassword.tokenStatus": {
             "type": "string",
             "markdownDescription": "**Token Status** - Shows whether a Service Account Token is currently stored securely",
             "default": "❌ No token configured",
             "readOnly": true,
             "enablement": "false"
           },
-          "devMind.env.onePassword.vaultId": {
+          "devOrb.env.onePassword.vaultId": {
             "type": "string",
-            "markdownDescription": "**1Password Vault ID** for environment variables  \n\n💡 **Tip:** Use the command `DevMind: Select 1Password Vault` to browse and choose from your available vaults",
-            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+            "markdownDescription": "**1Password Vault ID** for environment variables  \n\n💡 **Tip:** Use the command `DevOrb: Select 1Password Vault` to browse and choose from your available vaults",
+            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
           },
-          "devMind.env.secretPrefix": {
+          "devOrb.env.secretPrefix": {
             "type": "string",
             "default": "",
             "markdownDescription": "**Optional prefix** for 1Password items. Supports VS Code variables like `${workspaceFolderBasename}` or `${env:USER}`. Leave empty for no prefix.",
             "pattern": "^([a-zA-Z0-9_\\-${}\\.]+|)$",
             "patternErrorMessage": "Prefix must contain only letters, numbers, underscores, hyphens, and VS Code variables",
-            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
           },
-          "devMind.env.autoSync": {
+          "devOrb.env.autoSync": {
             "type": "boolean",
             "default": true,
             "markdownDescription": "**Automatically sync** environment variables when .env files change. When enabled, changes to .env files are automatically synced with 1Password.",
-            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
           },
-          "devMind.env.autoCreateFiles": {
+          "devOrb.env.autoCreateFiles": {
             "type": "boolean",
             "default": true,
             "markdownDescription": "**Automatically create missing .env files** from 1Password secrets when the extension starts.",
-            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
           }
         }
       }
     ],
     "views": {
-      "devMindPanel": [
+      "devOrbPanel": [
         {
-          "id": "devMind.environmentView",
+          "id": "devOrb.environmentView",
           "name": "Environment Variables",
           "when": "workspaceFolderCount > 0"
         }
@@ -377,8 +377,8 @@
     "viewsContainers": {
       "panel": [
         {
-          "id": "devMindPanel",
-          "title": "DevMind",
+          "id": "devOrbPanel",
+          "title": "DevOrb",
           "icon": "$(cloud)"
         }
       ]
@@ -386,71 +386,71 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "devMind.syncNow"
+          "command": "devOrb.syncNow"
         },
         {
-          "command": "devMind.showStatus"
+          "command": "devOrb.showStatus"
         },
         {
-          "command": "devMind.openSettings"
+          "command": "devOrb.openSettings"
         }
       ],
       "view/title": [
         {
-          "command": "devMind.refreshEnvironment",
-          "when": "view == devMind.environmentView",
+          "command": "devOrb.refreshEnvironment",
+          "when": "view == devOrb.environmentView",
           "group": "navigation"
         },
         {
-          "command": "devMind.syncAllEnvironment",
-          "when": "view == devMind.environmentView",
+          "command": "devOrb.syncAllEnvironment",
+          "when": "view == devOrb.environmentView",
           "group": "navigation"
         },
         {
-          "command": "devMind.syncAllSecretsForFile",
-          "when": "view == devMind.environmentView && viewItem == envFile",
+          "command": "devOrb.syncAllSecretsForFile",
+          "when": "view == devOrb.environmentView && viewItem == envFile",
           "group": "inline"
         }
       ],
       "view/item/context": [
         {
-          "command": "devMind.syncEnvironmentVariable",
-          "when": "view == devMind.environmentView && viewItem == envVariable",
+          "command": "devOrb.syncEnvironmentVariable",
+          "when": "view == devOrb.environmentView && viewItem == envVariable",
           "group": "inline"
         },
         {
-          "command": "devMind.addRemoteSecretToLocal",
-          "when": "view == devMind.environmentView && viewItem == remoteSecret",
+          "command": "devOrb.addRemoteSecretToLocal",
+          "when": "view == devOrb.environmentView && viewItem == remoteSecret",
           "group": "inline"
         },
         {
-          "command": "devMind.downloadSecretToEnv",
-          "when": "view == devMind.environmentView && viewItem == onePasswordSecret",
+          "command": "devOrb.downloadSecretToEnv",
+          "when": "view == devOrb.environmentView && viewItem == onePasswordSecret",
           "group": "inline@1"
         },
         {
-          "command": "devMind.downloadSecretToAllEnv",
-          "when": "view == devMind.environmentView && viewItem == onePasswordSecret",
+          "command": "devOrb.downloadSecretToAllEnv",
+          "when": "view == devOrb.environmentView && viewItem == onePasswordSecret",
           "group": "inline@2"
         },
         {
-          "command": "devMind.addMissingSecretToFile",
-          "when": "view == devMind.environmentView && viewItem == missingSecret",
+          "command": "devOrb.addMissingSecretToFile",
+          "when": "view == devOrb.environmentView && viewItem == missingSecret",
           "group": "inline"
         },
         {
-          "command": "devMind.uploadSecretToGitHub",
-          "when": "view == devMind.environmentView && viewItem == localOnlySecret",
+          "command": "devOrb.uploadSecretToGitHub",
+          "when": "view == devOrb.environmentView && viewItem == localOnlySecret",
           "group": "inline@1"
         },
         {
-          "command": "devMind.removeSecretFromFile",
-          "when": "view == devMind.environmentView && (viewItem == syncedSecret || viewItem == localOnlySecret || viewItem == conflictedSecret)",
+          "command": "devOrb.removeSecretFromFile",
+          "when": "view == devOrb.environmentView && (viewItem == syncedSecret || viewItem == localOnlySecret || viewItem == conflictedSecret)",
           "group": "inline@2"
         },
         {
-          "command": "devMind.resolveSecretConflict",
-          "when": "view == devMind.environmentView && viewItem == conflictedSecret",
+          "command": "devOrb.resolveSecretConflict",
+          "when": "view == devOrb.environmentView && viewItem == conflictedSecret",
           "group": "inline@1"
         }
       ]

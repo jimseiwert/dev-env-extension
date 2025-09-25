@@ -29,13 +29,13 @@ function isRunningInDevContainer(): boolean {
 
 
 export async function activate(context: vscode.ExtensionContext) {
-	console.log('DevMind extension is now active!');
+	console.log('DevOrb extension is now active!');
 
 	// Debug: Show environment detection
 	const inDevContainer = isRunningInDevContainer();
 	const environment = inDevContainer ? 'Dev Container' : 'Host';
 
-	// Initialize DevMind Services
+	// Initialize DevOrb Services
 	syncService = new ClaudeSyncService();
 	await syncService.initialize();
 
@@ -62,14 +62,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Skip initialization during startup to avoid rate limits - will be done later with delay
 
 	// Register the tree view
-	const environmentView = vscode.window.createTreeView('devMind.environmentView', {
+	const environmentView = vscode.window.createTreeView('devOrb.environmentView', {
 		treeDataProvider: environmentViewProvider,
 		showCollapseAll: true
 	});
 
 	// Create status bar item for environment info
 	statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-	statusBarItem.command = 'devMind.showStatus';
+	statusBarItem.command = 'devOrb.showStatus';
 	statusBarItem.text = `$(desktop) ${environment}`;
 	statusBarItem.tooltip = `Extension running in: ${environment}`;
 	updateStatusBar();
@@ -83,42 +83,42 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// If in dev container and sync enabled, perform initial sync
 	if (inDevContainer) {
-		const mainConfig = vscode.workspace.getConfiguration('devMind');
-		const claudeConfig = vscode.workspace.getConfiguration('devMind.claude');
+		const mainConfig = vscode.workspace.getConfiguration('devOrb');
+		const claudeConfig = vscode.workspace.getConfiguration('devOrb.claude');
 		if (mainConfig.get('enabled') && claudeConfig.get('enabled') && mainConfig.get('autoSync')) {
 			// Delay initial sync to let VSCode fully load
 			setTimeout(async () => {
-				await vscode.commands.executeCommand('devMind.syncNow');
+				await vscode.commands.executeCommand('devOrb.syncNow');
 			}, 5000);
 		}
 	}
 
 
-	// DevMind Sync commands
-	let syncNow = vscode.commands.registerCommand('devMind.syncNow', async () => {
-		const mainConfig = vscode.workspace.getConfiguration('devMind');
-		const claudeConfig = vscode.workspace.getConfiguration('devMind.claude');
+	// DevOrb Sync commands
+	let syncNow = vscode.commands.registerCommand('devOrb.syncNow', async () => {
+		const mainConfig = vscode.workspace.getConfiguration('devOrb');
+		const claudeConfig = vscode.workspace.getConfiguration('devOrb.claude');
 
 		if (!mainConfig.get('enabled')) {
 			const enable = await vscode.window.showInformationMessage(
-				'DevMind is disabled. Enable it first?',
+				'DevOrb is disabled. Enable it first?',
 				'Enable',
 				'Cancel'
 			);
 			if (enable === 'Enable') {
-				await vscode.commands.executeCommand('devMind.openSettings');
+				await vscode.commands.executeCommand('devOrb.openSettings');
 			}
 			return;
 		}
 
 		if (!claudeConfig.get('enabled')) {
 			const enable = await vscode.window.showInformationMessage(
-				'DevMind Sync is disabled. Enable it first?',
+				'DevOrb Sync is disabled. Enable it first?',
 				'Enable',
 				'Cancel'
 			);
 			if (enable === 'Enable') {
-				await vscode.commands.executeCommand('devMind.openSettings');
+				await vscode.commands.executeCommand('devOrb.openSettings');
 			}
 			return;
 		}
@@ -127,7 +127,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const isAuthenticated = await syncService.ensureAuthenticated();
 		if (!isAuthenticated) {
 			const signIn = await vscode.window.showInformationMessage(
-				'Please sign in to GitHub to enable DevMind Sync.',
+				'Please sign in to GitHub to enable DevOrb Sync.',
 				'Sign In',
 				'Cancel'
 			);
@@ -159,7 +159,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	let showStatus = vscode.commands.registerCommand('devMind.showStatus', () => {
+	let showStatus = vscode.commands.registerCommand('devOrb.showStatus', () => {
 		const status = syncService.getSyncStatus();
 		const lastSync = status.lastSync ? new Date(status.lastSync).toLocaleString() : 'Never';
 		const statusMsg = `
@@ -172,73 +172,73 @@ Errors: ${status.errors.length}
 		vscode.window.showInformationMessage(statusMsg);
 	});
 
-	let openSettings = vscode.commands.registerCommand('devMind.openSettings', async () => {
+	let openSettings = vscode.commands.registerCommand('devOrb.openSettings', async () => {
 		try {
-			// Open settings and search for devMind
-			await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:jimseiwert.devmind');
+			// Open settings and search for devOrb
+			await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:jimseiwert.devorb');
 		} catch (error) {
 			try {
 				// Fallback: try broader search
-				await vscode.commands.executeCommand('workbench.action.openSettings', 'devMind');
+				await vscode.commands.executeCommand('workbench.action.openSettings', 'devOrb');
 			} catch (fallbackError) {
 				// Final fallback: open general settings and show info message
 				await vscode.commands.executeCommand('workbench.action.openSettings');
-				vscode.window.showInformationMessage('Search for "devMind" in the settings to configure DevMind sync options.');
+				vscode.window.showInformationMessage('Search for "devOrb" in the settings to configure DevOrb sync options.');
 			}
 		}
 	});
 
 	// Environment commands
-	let refreshEnvironment = vscode.commands.registerCommand('devMind.refreshEnvironment', async () => {
+	let refreshEnvironment = vscode.commands.registerCommand('devOrb.refreshEnvironment', async () => {
 		await environmentViewProvider.refresh();
 	});
 
-	let syncAllEnvironment = vscode.commands.registerCommand('devMind.syncAllEnvironment', async () => {
+	let syncAllEnvironment = vscode.commands.registerCommand('devOrb.syncAllEnvironment', async () => {
 		await environmentViewProvider.syncAllEnvironmentVariables();
 	});
 
-	let syncEnvironmentVariable = vscode.commands.registerCommand('devMind.syncEnvironmentVariable', async (item) => {
+	let syncEnvironmentVariable = vscode.commands.registerCommand('devOrb.syncEnvironmentVariable', async (item) => {
 		await environmentViewProvider.syncEnvironmentVariable(item);
 	});
 
-	let addRemoteSecretToLocal = vscode.commands.registerCommand('devMind.addRemoteSecretToLocal', async (item) => {
+	let addRemoteSecretToLocal = vscode.commands.registerCommand('devOrb.addRemoteSecretToLocal', async (item) => {
 		await environmentViewProvider.addRemoteSecretToLocal(item);
 	});
 
-	let downloadSecretToEnv = vscode.commands.registerCommand('devMind.downloadSecretToEnv', async (item) => {
+	let downloadSecretToEnv = vscode.commands.registerCommand('devOrb.downloadSecretToEnv', async (item) => {
 		await environmentViewProvider.downloadSecretToEnv(item);
 	});
 
-	let downloadSecretToAllEnv = vscode.commands.registerCommand('devMind.downloadSecretToAllEnv', async (item) => {
+	let downloadSecretToAllEnv = vscode.commands.registerCommand('devOrb.downloadSecretToAllEnv', async (item) => {
 		await environmentViewProvider.downloadSecretToAllEnv(item);
 	});
 
-	let addMissingSecretToFile = vscode.commands.registerCommand('devMind.addMissingSecretToFile', async (item) => {
+	let addMissingSecretToFile = vscode.commands.registerCommand('devOrb.addMissingSecretToFile', async (item) => {
 		await environmentViewProvider.addMissingSecretToFile(item);
 	});
 
-	let uploadSecretToGitHub = vscode.commands.registerCommand('devMind.uploadSecretToGitHub', async (item) => {
+	let uploadSecretToGitHub = vscode.commands.registerCommand('devOrb.uploadSecretToGitHub', async (item) => {
 		await environmentViewProvider.uploadSecretToGitHub(item);
 	});
 
-	let removeSecretFromFile = vscode.commands.registerCommand('devMind.removeSecretFromFile', async (item) => {
+	let removeSecretFromFile = vscode.commands.registerCommand('devOrb.removeSecretFromFile', async (item) => {
 		await environmentViewProvider.removeSecretFromFile(item);
 	});
 
-	let syncAllSecretsForFile = vscode.commands.registerCommand('devMind.syncAllSecretsForFile', async (fileUri) => {
+	let syncAllSecretsForFile = vscode.commands.registerCommand('devOrb.syncAllSecretsForFile', async (fileUri) => {
 		await environmentViewProvider.syncAllSecretsForFile(fileUri);
 	});
 
-	let resolveSecretConflict = vscode.commands.registerCommand('devMind.resolveSecretConflict', async (item) => {
+	let resolveSecretConflict = vscode.commands.registerCommand('devOrb.resolveSecretConflict', async (item) => {
 		await environmentViewProvider.resolveSecretConflict(item);
 	});
 
-	let signUp1Password = vscode.commands.registerCommand('devMind.signUp1Password', async () => {
+	let signUp1Password = vscode.commands.registerCommand('devOrb.signUp1Password', async () => {
 		const signupUrl = envService.getSignupUrl();
 		vscode.env.openExternal(vscode.Uri.parse(signupUrl));
 	});
 
-	let setup1Password = vscode.commands.registerCommand('devMind.setup1Password', async () => {
+	let setup1Password = vscode.commands.registerCommand('devOrb.setup1Password', async () => {
 		const hasToken = await envService.hasServiceAccountToken();
 
 		if (hasToken) {
@@ -251,11 +251,11 @@ Errors: ${status.errors.length}
 			);
 
 			if (choice === 'Update Token') {
-				await vscode.commands.executeCommand('devMind.setServiceAccountToken');
+				await vscode.commands.executeCommand('devOrb.setServiceAccountToken');
 			} else if (choice === 'Clear Token') {
-				await vscode.commands.executeCommand('devMind.clearServiceAccountToken');
+				await vscode.commands.executeCommand('devOrb.clearServiceAccountToken');
 			} else if (choice === 'Open Settings') {
-				await vscode.commands.executeCommand('devMind.openSettings');
+				await vscode.commands.executeCommand('devOrb.openSettings');
 			}
 		} else {
 			const choice = await vscode.window.showInformationMessage(
@@ -267,18 +267,18 @@ Errors: ${status.errors.length}
 			);
 
 			if (choice === 'Set Token') {
-				await vscode.commands.executeCommand('devMind.setServiceAccountToken');
+				await vscode.commands.executeCommand('devOrb.setServiceAccountToken');
 			} else if (choice === 'Select Vault') {
-				await vscode.commands.executeCommand('devMind.selectVault');
+				await vscode.commands.executeCommand('devOrb.selectVault');
 			} else if (choice === 'Open Settings') {
-				await vscode.commands.executeCommand('devMind.openSettings');
+				await vscode.commands.executeCommand('devOrb.openSettings');
 			} else if (choice === 'Learn More') {
 				vscode.env.openExternal(vscode.Uri.parse('https://developer.1password.com/docs/service-accounts/'));
 			}
 		}
 	});
 
-	let setServiceAccountToken = vscode.commands.registerCommand('devMind.setServiceAccountToken', async () => {
+	let setServiceAccountToken = vscode.commands.registerCommand('devOrb.setServiceAccountToken', async () => {
 		const token = await vscode.window.showInputBox({
 			prompt: 'Enter your 1Password Service Account Token',
 			placeHolder: 'ops_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
@@ -310,7 +310,7 @@ Errors: ${status.errors.length}
 		}
 	});
 
-	let clearServiceAccountToken = vscode.commands.registerCommand('devMind.clearServiceAccountToken', async () => {
+	let clearServiceAccountToken = vscode.commands.registerCommand('devOrb.clearServiceAccountToken', async () => {
 		const confirm = await vscode.window.showWarningMessage(
 			'Are you sure you want to clear the 1Password Service Account Token?',
 			{ modal: true },
@@ -329,7 +329,7 @@ Errors: ${status.errors.length}
 		}
 	});
 
-	let testAutoSync = vscode.commands.registerCommand('devMind.testAutoSync', async () => {
+	let testAutoSync = vscode.commands.registerCommand('devOrb.testAutoSync', async () => {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 		if (!workspaceFolder) {
 			vscode.window.showErrorMessage('No workspace folder found');
@@ -349,7 +349,7 @@ Errors: ${status.errors.length}
 		await autoSyncFileChanges(testFile.fsPath);
 	});
 
-	let selectVault = vscode.commands.registerCommand('devMind.selectVault', async () => {
+	let selectVault = vscode.commands.registerCommand('devOrb.selectVault', async () => {
 		try {
 			// Check if we have a configured token
 			const hasToken = await envService.hasServiceAccountToken();
@@ -360,7 +360,7 @@ Errors: ${status.errors.length}
 					'Cancel'
 				);
 				if (setup === 'Setup Token') {
-					await vscode.commands.executeCommand('devMind.setServiceAccountToken');
+					await vscode.commands.executeCommand('devOrb.setServiceAccountToken');
 				}
 				return;
 			}
@@ -384,13 +384,13 @@ Errors: ${status.errors.length}
 			}));
 
 			const selected = await vscode.window.showQuickPick(vaultItems, {
-				placeHolder: 'Select a vault for DevMind environment variables',
+				placeHolder: 'Select a vault for DevOrb environment variables',
 				matchOnDescription: true
 			});
 
 			if (selected) {
 				// Update the vault ID in configuration
-				const config = vscode.workspace.getConfiguration('devMind.env');
+				const config = vscode.workspace.getConfiguration('devOrb.env');
 				await config.update('onePassword.vaultId', selected.description, vscode.ConfigurationTarget.Global);
 
 				vscode.window.showInformationMessage(`✅ Selected vault: ${selected.label} (${selected.description})`);
@@ -408,7 +408,7 @@ Errors: ${status.errors.length}
 
 	// Listen for configuration changes
 	const configWatcher = vscode.workspace.onDidChangeConfiguration(async (e) => {
-		if (e.affectsConfiguration('devMind') || e.affectsConfiguration('devMind.claude')) {
+		if (e.affectsConfiguration('devOrb') || e.affectsConfiguration('devOrb.claude')) {
 			// Reinitialize service with new config
 			syncService.dispose();
 			syncService = new ClaudeSyncService();
@@ -416,12 +416,12 @@ Errors: ${status.errors.length}
 		}
 
 		// Handle 1Password token configuration changes
-		if (e.affectsConfiguration('devMind.env.onePassword.serviceAccountToken')) {
+		if (e.affectsConfiguration('devOrb.env.onePassword.serviceAccountToken')) {
 			await handleServiceAccountTokenChange();
 		}
 
 		// Reinitialize environment service if environment config changed
-		if (e.affectsConfiguration('devMind.env')) {
+		if (e.affectsConfiguration('devOrb.env')) {
 			// Only process config changes after initial setup is complete
 			if (!remoteDataLoaded) {
 				console.log('Ignoring config change during initial setup');
@@ -460,7 +460,7 @@ Errors: ${status.errors.length}
 
 	// Set up automatic file watching for .env files
 	const setupFileWatcher = () => {
-		const envConfig = vscode.workspace.getConfiguration('devMind.env');
+		const envConfig = vscode.workspace.getConfiguration('devOrb.env');
 		const enabled = envConfig.get('enabled', true);
 		const autoSync = envConfig.get('autoSync', true);
 		const hasWorkspace = !!vscode.workspace.workspaceFolders;
@@ -633,7 +633,7 @@ Errors: ${status.errors.length}
 
 	// Auto-create missing env files from 1Password secrets (disabled during startup to avoid rate limits)
 	const autoCreateMissingEnvFiles = async () => {
-		const envConfig = vscode.workspace.getConfiguration('devMind.env');
+		const envConfig = vscode.workspace.getConfiguration('devOrb.env');
 		if (!await envService.isConfigured() ||
 			!vscode.workspace.workspaceFolders ||
 			!envConfig.get('autoCreateFiles', true)) {
@@ -711,7 +711,7 @@ Errors: ${status.errors.length}
 	async function updateTokenStatus() {
 		try {
 			const hasToken = await envService.hasServiceAccountToken();
-			const config = vscode.workspace.getConfiguration('devMind.env');
+			const config = vscode.workspace.getConfiguration('devOrb.env');
 			const status = hasToken ? '✅ Token configured securely' : '❌ No token configured';
 
 			await config.update('onePassword.tokenStatus', status, vscode.ConfigurationTarget.Global);
@@ -721,7 +721,7 @@ Errors: ${status.errors.length}
 	}
 
 	async function handleServiceAccountTokenChange() {
-		const config = vscode.workspace.getConfiguration('devMind.env');
+		const config = vscode.workspace.getConfiguration('devOrb.env');
 		const tokenFromSettings = config.get<string>('onePassword.serviceAccountToken', '');
 
 		if (tokenFromSettings && tokenFromSettings.trim() !== '') {
@@ -743,19 +743,19 @@ Errors: ${status.errors.length}
 				// Reinitialize services with the new token
 				await envService.initialize();
 
-				// Check if vault ID is empty and create DevMind vault
-				const envConfig = vscode.workspace.getConfiguration('devMind.env');
+				// Check if vault ID is empty and create DevOrb vault
+				const envConfig = vscode.workspace.getConfiguration('devOrb.env');
 				const vaultId = envConfig.get<string>('onePassword.vaultId', '');
 
 				if (!vaultId || vaultId.trim() === '') {
 					try {
-						const foundVaultId = await envService.ensureDevMindVault();
-						vscode.window.showInformationMessage(`🔐 Token saved securely and found DevMind vault! Vault ID: ${foundVaultId}`);
+						const foundVaultId = await envService.ensureDevOrbVault();
+						vscode.window.showInformationMessage(`🔐 Token saved securely and found DevOrb vault! Vault ID: ${foundVaultId}`);
 					} catch (error) {
-						console.error('Failed to find DevMind vault:', error);
+						console.error('Failed to find DevOrb vault:', error);
 						const message = error instanceof Error ? error.message : String(error);
-						if (message.includes('DevMind vault not found')) {
-							vscode.window.showWarningMessage('🔐 Token saved securely! Please create a vault named "DevMind" in 1Password or configure a vault ID in settings.');
+						if (message.includes('DevOrb vault not found')) {
+							vscode.window.showWarningMessage('🔐 Token saved securely! Please create a vault named "DevOrb" in 1Password or configure a vault ID in settings.');
 						} else {
 							vscode.window.showInformationMessage('🔐 Token saved securely! Please configure vault ID in settings.');
 						}
@@ -778,8 +778,8 @@ Errors: ${status.errors.length}
 
 	// Function to update status bar
 	function updateStatusBar() {
-		const mainConfig = vscode.workspace.getConfiguration('devMind');
-		const claudeConfig = vscode.workspace.getConfiguration('devMind.claude');
+		const mainConfig = vscode.workspace.getConfiguration('devOrb');
+		const claudeConfig = vscode.workspace.getConfiguration('devOrb.claude');
 		if (!mainConfig.get('enabled') || !claudeConfig.get('enabled')) {
 			statusBarItem.hide();
 			return;
@@ -789,14 +789,14 @@ Errors: ${status.errors.length}
 		const lastSync = status.lastSync ? new Date(status.lastSync).toLocaleString() : 'Never';
 
 		if (status.issyncing) {
-			statusBarItem.text = "$(sync~spin) DevMind Sync: Syncing...";
-			statusBarItem.tooltip = "DevMind configuration sync in progress";
+			statusBarItem.text = "$(sync~spin) DevOrb Sync: Syncing...";
+			statusBarItem.tooltip = "DevOrb configuration sync in progress";
 		} else if (status.errors.length > 0) {
-			statusBarItem.text = "$(error) DevMind Sync: Error";
-			statusBarItem.tooltip = `DevMind Sync Error: ${status.errors[0]}`;
+			statusBarItem.text = "$(error) DevOrb Sync: Error";
+			statusBarItem.tooltip = `DevOrb Sync Error: ${status.errors[0]}`;
 		} else {
-			statusBarItem.text = "$(cloud) DevMind Sync";
-			statusBarItem.tooltip = `DevMind Sync - Last sync: ${lastSync}`;
+			statusBarItem.text = "$(cloud) DevOrb Sync";
+			statusBarItem.tooltip = `DevOrb Sync - Last sync: ${lastSync}`;
 		}
 
 		statusBarItem.show();

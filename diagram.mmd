@@ -36,19 +36,19 @@ sequenceDiagram
 
       Note over 1PSvc, 1P: Core API Call Sequence
 
-      1PSvc->>1PSvc: ensureDevMindVault()
+      1PSvc->>1PSvc: ensureDevOrbVault()
       alt Vault ID configured
           Note over 1PSvc: Return cached/configured vault ID - NO API CALL
       else No vault configured
           1PSvc->>1P: vaults.list() [rate limited, 3s gap]
           1P-->>1PSvc: vault list
-          1PSvc->>1PSvc: find "DevMind" vault or update config
+          1PSvc->>1PSvc: find "DevOrb" vault or update config
       end
 
       1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
       1P-->>1PSvc: all items in vault
 
-      1PSvc->>1PSvc: filter items (devmind tag + active state)
+      1PSvc->>1PSvc: filter items (devorb tag + active state)
 
       Note over 1PSvc, 1P: Parallel Detail Fetching
 
@@ -82,7 +82,7 @@ sequenceDiagram
       User->>Ext: Update secret value
       Ext->>EnvSvc: updateSecretValue(itemId, newValue)
       EnvSvc->>1PSvc: updateSecretValue()
-      1PSvc->>1PSvc: ensureDevMindVault() [cached - no API call]
+      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
       1PSvc->>1P: items.get(vaultId, itemId) [rate limited, 3s gap]
       1P-->>1PSvc: current item
       1PSvc->>1P: items.put(updatedItem) [rate limited, 3s gap]
@@ -91,7 +91,7 @@ sequenceDiagram
       User->>Ext: Create new secret
       Ext->>EnvSvc: syncSingleVariable()
       EnvSvc->>1PSvc: createOrUpdateSecret()
-      1PSvc->>1PSvc: ensureDevMindVault() [cached - no API call]
+      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
       1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
       1P-->>1PSvc: existing items
       1PSvc->>1PSvc: check for duplicates (local processing)
@@ -101,7 +101,7 @@ sequenceDiagram
       User->>Ext: Delete secret
       Ext->>EnvSvc: deleteSecret()
       EnvSvc->>1PSvc: deleteSecret()
-      1PSvc->>1PSvc: ensureDevMindVault() [cached - no API call]
+      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
       1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
       1P-->>1PSvc: all items
       1PSvc->>1PSvc: find item to delete (local processing)
