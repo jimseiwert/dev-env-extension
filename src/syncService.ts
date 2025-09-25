@@ -72,8 +72,8 @@ export class ClaudeSyncService {
   }
 
   private loadConfig(): SyncConfig {
-    const mainConfig = vscode.workspace.getConfiguration('devMind');
-    const config = vscode.workspace.getConfiguration('devMind.claude');
+    const mainConfig = vscode.workspace.getConfiguration('devOrb');
+    const config = vscode.workspace.getConfiguration('devOrb.claude');
     return {
       enabled: mainConfig.get('enabled', true) && config.get('enabled', true),
       gists: {
@@ -208,18 +208,18 @@ export class ClaudeSyncService {
 
   private async authenticateGitHub(): Promise<void> {
     try {
-      console.log('🔐 DevMind Claude Sync: Attempting GitHub authentication...');
+      console.log('🔐 DevOrb Claude Sync: Attempting GitHub authentication...');
 
       // First try to get existing session without creating a new one
       const existingSessions = await vscode.authentication.getSession('github', ['gist'], { createIfNone: false });
 
       if (existingSessions) {
-        console.log('✅ DevMind Claude Sync: Found existing GitHub session');
+        console.log('✅ DevOrb Claude Sync: Found existing GitHub session');
         this.githubSession = existingSessions;
         return;
       }
 
-      console.log('🔐 DevMind Claude Sync: No existing session found, requesting new authentication...');
+      console.log('🔐 DevOrb Claude Sync: No existing session found, requesting new authentication...');
       // If no existing session, prompt user to sign in
       this.githubSession = await vscode.authentication.getSession('github', ['gist'], {
         createIfNone: true,
@@ -227,15 +227,15 @@ export class ClaudeSyncService {
       });
 
       if (this.githubSession) {
-        console.log('✅ DevMind Claude Sync: GitHub authentication successful');
+        console.log('✅ DevOrb Claude Sync: GitHub authentication successful');
       } else {
-        console.log('❌ DevMind Claude Sync: GitHub authentication returned null session');
+        console.log('❌ DevOrb Claude Sync: GitHub authentication returned null session');
       }
 
     } catch (error) {
       const errorMessage = `GitHub authentication failed: ${error instanceof Error ? error.message : String(error)}`;
       this.status.errors.push(errorMessage);
-      console.error('❌ DevMind Claude Sync:', errorMessage, error);
+      console.error('❌ DevOrb Claude Sync:', errorMessage, error);
     }
   }
 
@@ -261,7 +261,7 @@ export class ClaudeSyncService {
 
     // Validate that we have files to upload
     if (!files || Object.keys(files).length === 0) {
-      console.warn(`❌ DevMind Claude Sync: No files provided for ${gistType} gist creation`);
+      console.warn(`❌ DevOrb Claude Sync: No files provided for ${gistType} gist creation`);
       return null;
     }
 
@@ -269,17 +269,17 @@ export class ClaudeSyncService {
     const seenFilenames = new Set<string>();
     for (const [filename, fileData] of Object.entries(files)) {
       if (!fileData.content || typeof fileData.content !== 'string') {
-        console.warn(`❌ DevMind Claude Sync: Invalid file content for ${filename} in ${gistType} gist`);
+        console.warn(`❌ DevOrb Claude Sync: Invalid file content for ${filename} in ${gistType} gist`);
         return null;
       }
 
       if (fileData.content.trim().length === 0) {
-        console.warn(`❌ DevMind Claude Sync: Empty file content for ${filename} in ${gistType} gist`);
+        console.warn(`❌ DevOrb Claude Sync: Empty file content for ${filename} in ${gistType} gist`);
         return null;
       }
 
       if (seenFilenames.has(filename)) {
-        console.warn(`❌ DevMind Claude Sync: Duplicate filename ${filename} in ${gistType} gist`);
+        console.warn(`❌ DevOrb Claude Sync: Duplicate filename ${filename} in ${gistType} gist`);
         return null;
       }
       seenFilenames.add(filename);
@@ -287,7 +287,7 @@ export class ClaudeSyncService {
 
     try {
       const gistData = {
-        description: descriptions[gistType] || `DevMind Claude ${gistType}`,
+        description: descriptions[gistType] || `DevOrb Claude ${gistType}`,
         public: false,
         files
       };
@@ -298,7 +298,7 @@ export class ClaudeSyncService {
           'Authorization': `Bearer ${this.githubSession.accessToken}`,
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
-          'User-Agent': 'VS Code Extension DevMind'
+          'User-Agent': 'VS Code Extension DevOrb'
         },
         body: JSON.stringify(gistData)
       });
@@ -312,11 +312,11 @@ export class ClaudeSyncService {
         return result.id;
       } else {
         const errorBody = await response.text();
-        console.error(`❌ DevMind Claude Sync: Failed to create gist for group '${gistType}': ${response.status} ${response.statusText} - ${errorBody}`);
+        console.error(`❌ DevOrb Claude Sync: Failed to create gist for group '${gistType}': ${response.status} ${response.statusText} - ${errorBody}`);
         this.status.errors.push(`Failed to create ${gistType} gist: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
-      console.error(`❌ DevMind Claude Sync: Failed to create gist for group '${gistType}':`, error);
+      console.error(`❌ DevOrb Claude Sync: Failed to create gist for group '${gistType}':`, error);
       this.status.errors.push(`Failed to create ${gistType} gist: ${error instanceof Error ? error.message : String(error)}`);
     }
 
@@ -324,7 +324,7 @@ export class ClaudeSyncService {
   }
 
   private async updateGistIdInConfig(gistType: string, gistId: string): Promise<void> {
-    const config = vscode.workspace.getConfiguration('devMind.claude');
+    const config = vscode.workspace.getConfiguration('devOrb.claude');
     await config.update(`gists.${gistType}`, gistId, vscode.ConfigurationTarget.Global);
 
     // Update local config object for known types
@@ -352,64 +352,64 @@ export class ClaudeSyncService {
   }
 
   public async performSync(): Promise<void> {
-    console.log('🔄 DevMind Claude Sync: Starting sync process...');
+    console.log('🔄 DevOrb Claude Sync: Starting sync process...');
 
     if (this.status.issyncing) {
-      console.log('⏸️ DevMind Claude Sync: Already syncing, skipping...');
+      console.log('⏸️ DevOrb Claude Sync: Already syncing, skipping...');
       return;
     }
 
-    console.log('🔍 DevMind Claude Sync: Claude directory:', this.claudeDir);
+    console.log('🔍 DevOrb Claude Sync: Claude directory:', this.claudeDir);
 
     // Ensure we're authenticated
-    console.log('🔐 DevMind Claude Sync: Checking authentication...');
+    console.log('🔐 DevOrb Claude Sync: Checking authentication...');
     if (!(await this.ensureAuthenticated())) {
-      console.log('❌ DevMind Claude Sync: Authentication failed');
+      console.log('❌ DevOrb Claude Sync: Authentication failed');
       this.status.errors.push('GitHub authentication required for sync');
       return;
     }
-    console.log('✅ DevMind Claude Sync: Authentication successful');
+    console.log('✅ DevOrb Claude Sync: Authentication successful');
 
     this.status.issyncing = true;
     this.status.errors = [];
 
     try {
-      console.log('📁 DevMind Claude Sync: Scanning local files...');
+      console.log('📁 DevOrb Claude Sync: Scanning local files...');
       const localFiles = await this.scanLocalFiles();
-      console.log(`📊 DevMind Claude Sync: Found ${localFiles.length} local files to process`);
+      console.log(`📊 DevOrb Claude Sync: Found ${localFiles.length} local files to process`);
 
-      console.log('☁️ DevMind Claude Sync: Fetching existing gist data...');
+      console.log('☁️ DevOrb Claude Sync: Fetching existing gist data...');
       const gistData = await this.fetchGist();
-      console.log('📋 DevMind Claude Sync: Gist data fetched');
+      console.log('📋 DevOrb Claude Sync: Gist data fetched');
 
-      console.log('🔍 DevMind Claude Sync: Checking for conflicts...');
+      console.log('🔍 DevOrb Claude Sync: Checking for conflicts...');
       const conflicts = this.detectConflicts(localFiles, gistData);
 
       if (conflicts.length > 0) {
-        console.log(`⚠️ DevMind Claude Sync: Found ${conflicts.length} conflicts`);
+        console.log(`⚠️ DevOrb Claude Sync: Found ${conflicts.length} conflicts`);
         this.status.conflicts = conflicts;
         await this.showConflictResolution(conflicts);
         return;
       }
 
-      console.log('📤 DevMind Claude Sync: Uploading files to gists...');
+      console.log('📤 DevOrb Claude Sync: Uploading files to gists...');
       await this.uploadToGist(localFiles);
-      console.log('✅ DevMind Claude Sync: Upload completed');
+      console.log('✅ DevOrb Claude Sync: Upload completed');
 
-      console.log('📥 DevMind Claude Sync: Downloading from gists...');
+      console.log('📥 DevOrb Claude Sync: Downloading from gists...');
       await this.downloadFromGist(gistData, localFiles);
-      console.log('✅ DevMind Claude Sync: Download completed');
+      console.log('✅ DevOrb Claude Sync: Download completed');
 
       this.status.lastSync = Date.now();
-      console.log('🎉 DevMind Claude Sync: Sync completed successfully!');
+      console.log('🎉 DevOrb Claude Sync: Sync completed successfully!');
 
     } catch (error) {
-      console.error('💥 DevMind Claude Sync: Sync failed with error:', error);
+      console.error('💥 DevOrb Claude Sync: Sync failed with error:', error);
       this.status.errors.push(`Sync failed: ${error instanceof Error ? error.message : String(error)}`);
-      vscode.window.showErrorMessage(`DevMind Sync failed: ${error instanceof Error ? error.message : String(error)}`);
+      vscode.window.showErrorMessage(`DevOrb Sync failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this.status.issyncing = false;
-      console.log('🏁 DevMind Claude Sync: Sync process ended');
+      console.log('🏁 DevOrb Claude Sync: Sync process ended');
     }
   }
 
@@ -440,7 +440,7 @@ export class ClaudeSyncService {
 
     } catch (error) {
       this.status.errors.push(`Partial sync failed for ${fileType}: ${error instanceof Error ? error.message : String(error)}`);
-      vscode.window.showErrorMessage(`DevMind ${fileType} sync failed: ${error instanceof Error ? error.message : String(error)}`);
+      vscode.window.showErrorMessage(`DevOrb ${fileType} sync failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this.status.issyncing = false;
     }
@@ -535,29 +535,29 @@ export class ClaudeSyncService {
 
   private async scanDirectoryForFiles(dirPath: string, files: SyncableFile[]): Promise<void> {
     try {
-      console.log(`🔍 DevMind Claude Sync: Scanning directory: ${dirPath}`);
+      console.log(`🔍 DevOrb Claude Sync: Scanning directory: ${dirPath}`);
       const items = fs.readdirSync(dirPath);
-      console.log(`📂 DevMind Claude Sync: Found ${items.length} items in ${dirPath}:`, items);
+      console.log(`📂 DevOrb Claude Sync: Found ${items.length} items in ${dirPath}:`, items);
 
       for (const item of items) {
         const fullPath = path.join(dirPath, item);
         const stats = fs.statSync(fullPath);
 
         if (stats.isDirectory()) {
-          console.log(`📁 DevMind Claude Sync: Recursing into subdirectory: ${fullPath}`);
+          console.log(`📁 DevOrb Claude Sync: Recursing into subdirectory: ${fullPath}`);
           // Recursively scan subdirectories
           await this.scanDirectoryForFiles(fullPath, files);
         } else if (stats.isFile()) {
           // Skip excluded files
           const relativePath = path.relative(this.claudeDir, fullPath);
           if (this.shouldExcludeFile(relativePath)) {
-            console.log(`⚠️ DevMind Claude Sync: Excluding file: ${relativePath}`);
+            console.log(`⚠️ DevOrb Claude Sync: Excluding file: ${relativePath}`);
             continue;
           }
 
           // Skip .DS_Store files
           if (path.basename(fullPath) === '.DS_Store') {
-            console.log(`⚠️ DevMind Claude Sync: Skipping .DS_Store file: ${relativePath}`);
+            console.log(`⚠️ DevOrb Claude Sync: Skipping .DS_Store file: ${relativePath}`);
             continue;
           }
 
@@ -572,7 +572,7 @@ export class ClaudeSyncService {
               lastModified: stats.mtime.getTime(),
               hash
             });
-            console.log(`✅ DevMind Claude Sync: Added file to scan: ${relativePath} (${content.length} chars)`);
+            console.log(`✅ DevOrb Claude Sync: Added file to scan: ${relativePath} (${content.length} chars)`);
           } catch (readError) {
             console.warn('Could not read file:', fullPath, readError);
           }
@@ -824,7 +824,7 @@ export class ClaudeSyncService {
   }
 
   private async uploadToGist(files: SyncableFile[]): Promise<void> {
-    console.log(`📤 DevMind Claude Sync: uploadToGist called with ${files.length} files`);
+    console.log(`📤 DevOrb Claude Sync: uploadToGist called with ${files.length} files`);
 
     if (!this.githubSession) {
       throw new Error('GitHub authentication required');
@@ -832,11 +832,11 @@ export class ClaudeSyncService {
 
     // Skip if no files to sync
     if (files.length === 0) {
-      console.log('⚠️ DevMind Claude Sync: No files to sync - uploadToGist returning early');
+      console.log('⚠️ DevOrb Claude Sync: No files to sync - uploadToGist returning early');
       return;
     }
 
-    console.log('📁 DevMind Claude Sync: Files to process:');
+    console.log('📁 DevOrb Claude Sync: Files to process:');
     files.forEach((file, index) => {
       console.log(`  ${index + 1}. ${file.relativePath} (${file.content.length} chars)`);
     });
@@ -844,20 +844,20 @@ export class ClaudeSyncService {
     // Group files dynamically by their top-level directory
     const fileGroups: { [groupName: string]: { [filename: string]: { content: string } } } = {};
 
-    console.log(`📊 DevMind Claude Sync: Grouping ${files.length} files...`);
+    console.log(`📊 DevOrb Claude Sync: Grouping ${files.length} files...`);
     for (const file of files) {
-      console.log(`🔍 DevMind Claude Sync: Processing file: ${file.relativePath}`);
+      console.log(`🔍 DevOrb Claude Sync: Processing file: ${file.relativePath}`);
       const safeFilename = file.relativePath.replace(/\\/g, '/');
       const content = file.content || '';
 
       if (!safeFilename || typeof content !== 'string') {
-        console.log(`⚠️ DevMind Claude Sync: Skipping invalid file: ${safeFilename}`);
+        console.log(`⚠️ DevOrb Claude Sync: Skipping invalid file: ${safeFilename}`);
         continue;
       }
 
       // Skip empty files (GitHub Gists require non-empty content)
       if (content.trim().length === 0) {
-        console.log(`⚠️ DevMind Claude Sync: Skipping empty file: ${safeFilename}`);
+        console.log(`⚠️ DevOrb Claude Sync: Skipping empty file: ${safeFilename}`);
         continue;
       }
 
@@ -876,19 +876,19 @@ export class ClaudeSyncService {
       // Initialize group if it doesn't exist
       if (!fileGroups[groupName]) {
         fileGroups[groupName] = {};
-        console.log(`📂 DevMind Claude Sync: Created group '${groupName}'`);
+        console.log(`📂 DevOrb Claude Sync: Created group '${groupName}'`);
       }
 
       // Sanitize filename for GitHub Gist compatibility
       const gistFilename = this.sanitizeGistFilename(safeFilename);
       if (!gistFilename) {
-        console.warn(`⚠️ DevMind Claude Sync: Skipping file with invalid name: '${safeFilename}'`);
+        console.warn(`⚠️ DevOrb Claude Sync: Skipping file with invalid name: '${safeFilename}'`);
         continue;
       }
 
       // Check for filename collisions
       if (fileGroups[groupName][gistFilename]) {
-        console.warn(`⚠️ DevMind Claude Sync: Filename collision! '${safeFilename}' and existing file both map to '${gistFilename}' in group '${groupName}'`);
+        console.warn(`⚠️ DevOrb Claude Sync: Filename collision! '${safeFilename}' and existing file both map to '${gistFilename}' in group '${groupName}'`);
         // Make the filename unique by adding a suffix
         let counter = 1;
         let uniqueFilename = gistFilename;
@@ -901,16 +901,16 @@ export class ClaudeSyncService {
           }
           counter++;
         }
-        console.log(`📝 DevMind Claude Sync: Resolved collision by using '${uniqueFilename}' instead`);
+        console.log(`📝 DevOrb Claude Sync: Resolved collision by using '${uniqueFilename}' instead`);
         fileGroups[groupName][uniqueFilename] = { content };
       } else {
         fileGroups[groupName][gistFilename] = { content };
       }
 
-      console.log(`📝 DevMind Claude Sync: Added '${safeFilename}' as '${gistFilename}' to group '${groupName}'`);
+      console.log(`📝 DevOrb Claude Sync: Added '${safeFilename}' as '${gistFilename}' to group '${groupName}'`);
     }
 
-    console.log('📊 DevMind Claude Sync: File groups created:');
+    console.log('📊 DevOrb Claude Sync: File groups created:');
     for (const [groupName, groupFiles] of Object.entries(fileGroups)) {
       console.log(`  📂 Group '${groupName}': ${Object.keys(groupFiles).length} files`);
       Object.keys(groupFiles).forEach(filename => {
@@ -919,39 +919,39 @@ export class ClaudeSyncService {
     }
 
     // Upload each group to its respective gist
-    console.log('🚀 DevMind Claude Sync: Starting gist uploads...');
+    console.log('🚀 DevOrb Claude Sync: Starting gist uploads...');
     for (const [groupType, groupFiles] of Object.entries(fileGroups)) {
       if (Object.keys(groupFiles).length === 0) {
-        console.log(`⚠️ DevMind Claude Sync: Skipping empty group '${groupType}'`);
+        console.log(`⚠️ DevOrb Claude Sync: Skipping empty group '${groupType}'`);
         continue;
       }
 
-      console.log(`📤 DevMind Claude Sync: Processing group '${groupType}' with ${Object.keys(groupFiles).length} files`);
+      console.log(`📤 DevOrb Claude Sync: Processing group '${groupType}' with ${Object.keys(groupFiles).length} files`);
 
       let gistId = this.config.gists[groupType as keyof typeof this.config.gists];
-      console.log(`🔍 DevMind Claude Sync: Existing gist ID for '${groupType}':`, gistId || 'none');
+      console.log(`🔍 DevOrb Claude Sync: Existing gist ID for '${groupType}':`, gistId || 'none');
 
       if (gistId) {
         // Update existing gist
-        console.log(`🔄 DevMind Claude Sync: Updating existing gist ${gistId} for group '${groupType}'`);
+        console.log(`🔄 DevOrb Claude Sync: Updating existing gist ${gistId} for group '${groupType}'`);
         await this.updateExistingGist(gistId, groupFiles);
-        console.log(`✅ DevMind Claude Sync: Updated gist ${gistId} for group '${groupType}'`);
+        console.log(`✅ DevOrb Claude Sync: Updated gist ${gistId} for group '${groupType}'`);
       } else {
         // Create new gist for this group
-        console.log(`➕ DevMind Claude Sync: Creating new gist for group '${groupType}'`);
+        console.log(`➕ DevOrb Claude Sync: Creating new gist for group '${groupType}'`);
         const newGistId = await this.createGistForType(groupType, groupFiles);
         if (newGistId) {
-          console.log(`✅ DevMind Claude Sync: Created new gist ${newGistId} for group '${groupType}'`);
+          console.log(`✅ DevOrb Claude Sync: Created new gist ${newGistId} for group '${groupType}'`);
           // Store the new gist ID in config for future use
           await this.updateGistIdInConfig(groupType, newGistId);
-          console.log(`💾 DevMind Claude Sync: Saved gist ID to config for group '${groupType}'`);
+          console.log(`💾 DevOrb Claude Sync: Saved gist ID to config for group '${groupType}'`);
         } else {
-          console.error(`❌ DevMind Claude Sync: Failed to create gist for group '${groupType}'`);
+          console.error(`❌ DevOrb Claude Sync: Failed to create gist for group '${groupType}'`);
         }
       }
     }
 
-    console.log('🎉 DevMind Claude Sync: All gist uploads completed');
+    console.log('🎉 DevOrb Claude Sync: All gist uploads completed');
   }
 
   private async updateExistingGist(gistId: string, files: { [filename: string]: { content: string } }): Promise<void> {
@@ -965,7 +965,7 @@ export class ClaudeSyncService {
         'Authorization': `Bearer ${this.githubSession!.accessToken}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
-        'User-Agent': 'VS Code Extension DevMind'
+        'User-Agent': 'VS Code Extension DevOrb'
       },
       body: JSON.stringify(gistData)
     });

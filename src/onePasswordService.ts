@@ -117,10 +117,10 @@ export class OnePasswordService {
     );
 
     // Also show in output channel for debugging
-    const outputChannel = vscode.window.createOutputChannel('DevMind 1Password');
+    const outputChannel = vscode.window.createOutputChannel('DevOrb 1Password');
     outputChannel.appendLine(`[${new Date().toISOString()}] Rate limit reached. Next retry scheduled for ${timeString}`);
     outputChannel.appendLine('This is normal - 1Password has conservative rate limits to protect their service.');
-    outputChannel.appendLine('DevMind will automatically retry your request when the limit resets.');
+    outputChannel.appendLine('DevOrb will automatically retry your request when the limit resets.');
   }
 
   public getRateLimitStatus(): { isRateLimited: boolean; retryAfter?: Date } {
@@ -134,7 +134,7 @@ export class OnePasswordService {
   }
 
   private loadConfig(): OnePasswordConfig {
-    const config = vscode.workspace.getConfiguration('devMind.env');
+    const config = vscode.workspace.getConfiguration('devOrb.env');
     return {
       enabled: config.get('enabled', true),
       vaultId: config.get('onePassword.vaultId', ''),
@@ -186,7 +186,7 @@ export class OnePasswordService {
         if (token) {
           this.client = await createClient({
             auth: token,
-            integrationName: 'DevMind VS Code Extension',
+            integrationName: 'DevOrb VS Code Extension',
             integrationVersion: '1.0.0'
           });
         }
@@ -203,18 +203,18 @@ export class OnePasswordService {
   }
 
   private async getServiceAccountToken(): Promise<string | undefined> {
-    return await this.secretStorage.get('devMind.onePassword.serviceAccountToken');
+    return await this.secretStorage.get('devOrb.onePassword.serviceAccountToken');
   }
 
   public async setServiceAccountToken(token: string): Promise<void> {
     if (!token.startsWith('ops_')) {
       throw new Error('Invalid service account token format. Token should start with "ops_"');
     }
-    await this.secretStorage.store('devMind.onePassword.serviceAccountToken', token);
+    await this.secretStorage.store('devOrb.onePassword.serviceAccountToken', token);
   }
 
   public async clearServiceAccountToken(): Promise<void> {
-    await this.secretStorage.delete('devMind.onePassword.serviceAccountToken');
+    await this.secretStorage.delete('devOrb.onePassword.serviceAccountToken');
   }
 
   public async hasServiceAccountToken(): Promise<boolean> {
@@ -222,7 +222,7 @@ export class OnePasswordService {
     return !!token;
   }
 
-  public async ensureDevMindVault(): Promise<string> {
+  public async ensureDevOrbVault(): Promise<string> {
     if (!this.client) {
       throw new Error('1Password client not initialized');
     }
@@ -241,26 +241,26 @@ export class OnePasswordService {
       return this.config.vaultId;
     }
 
-    console.log('No vault configured, searching for DevMind vault...');
-    // Only get vaults list if we need to search for DevMind vault
-    const vaults = await this.rateLimitedApiCall(() => this.client!.vaults.list(), 'vaults.list - searching for DevMind vault');
+    console.log('No vault configured, searching for DevOrb vault...');
+    // Only get vaults list if we need to search for DevOrb vault
+    const vaults = await this.rateLimitedApiCall(() => this.client!.vaults.list(), 'vaults.list - searching for DevOrb vault');
 
-    const existingDevMindVault = vaults.find(v => v.title === 'DevMind');
+    const existingDevOrbVault = vaults.find(v => v.title === 'DevOrb');
 
-    if (existingDevMindVault) {
+    if (existingDevOrbVault) {
       // Update configuration with found vault
-      await this.updateVaultIdInConfig(existingDevMindVault.id);
+      await this.updateVaultIdInConfig(existingDevOrbVault.id);
       // Cache the result
-      this.vaultCache = { vaultId: existingDevMindVault.id, timestamp: Date.now() };
-      return existingDevMindVault.id;
+      this.vaultCache = { vaultId: existingDevOrbVault.id, timestamp: Date.now() };
+      return existingDevOrbVault.id;
     }
 
     // Vault creation not supported in current SDK - prompt user to create manually
-    throw new Error('DevMind vault not found. Please create a vault named "DevMind" in your 1Password account or specify an existing vault ID in settings.');
+    throw new Error('DevOrb vault not found. Please create a vault named "DevOrb" in your 1Password account or specify an existing vault ID in settings.');
   }
 
   private async updateVaultIdInConfig(vaultId: string): Promise<void> {
-    const config = vscode.workspace.getConfiguration('devMind.env');
+    const config = vscode.workspace.getConfiguration('devOrb.env');
     await config.update('onePassword.vaultId', vaultId, vscode.ConfigurationTarget.Global);
     this.config.vaultId = vaultId;
   }
@@ -315,7 +315,7 @@ export class OnePasswordService {
   private async loadSecretsInternal(): Promise<Item[]> {
     try {
       console.log('Starting to load 1Password secrets...');
-      const vaultId = await this.ensureDevMindVault();
+      const vaultId = await this.ensureDevOrbVault();
 
       // Use items.list() with active filter to get only active items from the API
       const activeFilter: ItemListFilter = {
@@ -332,12 +332,12 @@ export class OnePasswordService {
       );
       console.log(`Found ${items.length} active items in vault`);
 
-      // Filter items that have our devmind tag (already filtered for active by API)
-      const envItems = items.filter(item => item.tags.includes('devmind'));
-      console.log(`Found ${envItems.length} active DevMind environment items`);
+      // Filter items that have our devorb tag (already filtered for active by API)
+      const envItems = items.filter(item => item.tags.includes('devorb'));
+      console.log(`Found ${envItems.length} active DevOrb environment items`);
 
       if (envItems.length === 0) {
-        console.log('No DevMind items found, caching empty result');
+        console.log('No DevOrb items found, caching empty result');
         this.secretsCache = { data: [], timestamp: Date.now() };
         return [];
       }
@@ -449,7 +449,7 @@ export class OnePasswordService {
     }
 
     try {
-      const vaultId = await this.ensureDevMindVault();
+      const vaultId = await this.ensureDevOrbVault();
       const item = await this.rateLimitedApiCall(() => this.client!.items.get(vaultId, itemId), `getSecretValue for ${itemId}`);
 
       // Look for the concealed field that contains the secret value
@@ -480,7 +480,7 @@ export class OnePasswordService {
     }
 
     // Ensure vault exists or create it
-    const vaultId = await this.ensureDevMindVault();
+    const vaultId = await this.ensureDevOrbVault();
 
     const prefix = this.getExpandedPrefix();
     const itemTitle = `${prefix}${secretName}`;
@@ -490,7 +490,7 @@ export class OnePasswordService {
 
     // Look for existing item with the same name, value, and file path
     let matchingItem = null;
-    for (const item of existingItems.filter(item => item.tags.includes('devmind'))) {
+    for (const item of existingItems.filter(item => item.tags.includes('devorb'))) {
       if (item.title === itemTitle) {
         try {
           const fullItem = await this.rateLimitedApiCall(() => this.client!.items.get(vaultId, item.id));
@@ -527,7 +527,7 @@ export class OnePasswordService {
       throw new Error('1Password client not initialized');
     }
 
-    const vaultId = await this.ensureDevMindVault();
+    const vaultId = await this.ensureDevOrbVault();
     const metadata = await this.gatherSecretMetadata(filePath);
 
     const itemData: ItemCreateParams = {
@@ -573,7 +573,7 @@ export class OnePasswordService {
           value: metadata.repoUrl
         }] : [])
       ],
-      notes: `DevMind Environment Variable\n\nCreated: ${new Date().toISOString()}\nOriginal File: ${filePath}\nWorkspace: ${metadata.workspaceName}${metadata.repoName ? `\nRepository: ${metadata.repoName}` : ''}`
+      notes: `DevOrb Environment Variable\n\nCreated: ${new Date().toISOString()}\nOriginal File: ${filePath}\nWorkspace: ${metadata.workspaceName}${metadata.repoName ? `\nRepository: ${metadata.repoName}` : ''}`
     };
 
     await this.rateLimitedApiCall(() => this.client!.items.create(itemData));
@@ -622,7 +622,7 @@ export class OnePasswordService {
   }
 
   private generateSecretTags(filePath: string, metadata: any): string[] {
-    const tags = ['devmind'];
+    const tags = ['devorb'];
 
     // Add file-specific tags
     const fileName = path.basename(filePath);
@@ -648,7 +648,7 @@ export class OnePasswordService {
     }
 
     try {
-      const vaultId = await this.ensureDevMindVault();
+      const vaultId = await this.ensureDevOrbVault();
       // Get the current item
       const currentItem = await this.rateLimitedApiCall(() => this.client!.items.get(vaultId, itemId));
 
@@ -680,7 +680,7 @@ export class OnePasswordService {
     }
 
     try {
-      const vaultId = await this.ensureDevMindVault();
+      const vaultId = await this.ensureDevOrbVault();
       // Get the current item
       const currentItem = await this.rateLimitedApiCall(() => this.client!.items.get(vaultId, itemId), `updateSecret - get ${itemId}`);
 
@@ -714,13 +714,13 @@ export class OnePasswordService {
     }
 
     try {
-      const vaultId = await this.ensureDevMindVault();
+      const vaultId = await this.ensureDevOrbVault();
       // Find the item to delete by searching for it
       const items = await this.rateLimitedApiCall(() => this.client!.items.list(vaultId), `deleteSecret - list items for ${secretName}`);
       const prefix = this.getExpandedPrefix();
       const itemTitle = `${prefix}${secretName}`;
       const itemToDelete = items.find(item =>
-        item.title === itemTitle && item.tags.includes('devmind')
+        item.title === itemTitle && item.tags.includes('devorb')
       );
 
       if (itemToDelete) {

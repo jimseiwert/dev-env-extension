@@ -103,7 +103,7 @@ export class EnvironmentService {
 
   private extractSecretNameFromTitle(title: string): string {
     // Remove the expanded prefix to get the original secret name
-    const config = vscode.workspace.getConfiguration('devMind.env');
+    const config = vscode.workspace.getConfiguration('devOrb.env');
     let prefix = config.get('secretPrefix', '');
 
     if (prefix) {
@@ -275,8 +275,8 @@ export class EnvironmentService {
     return await this.onePasswordService.hasServiceAccountToken();
   }
 
-  public async ensureDevMindVault(): Promise<string> {
-    return await this.onePasswordService.ensureDevMindVault();
+  public async ensureDevOrbVault(): Promise<string> {
+    return await this.onePasswordService.ensureDevOrbVault();
   }
 
   public async getVaults(): Promise<Array<{id: string, name: string}>> {

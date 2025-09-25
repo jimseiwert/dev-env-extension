@@ -1,6 +1,6 @@
-# DevMind
+# DevOrb
 
-Your dev environment remembers across machines. DevMind syncs Claude AI, GitHub Copilot, and environment configurations seamlessly between your development setups.
+Your dev environment remembers across machines. DevOrb syncs Claude AI, GitHub Copilot, and environment configurations seamlessly between your development setups.
 
 ## Features
 
@@ -17,9 +17,9 @@ Sync your Claude AI and GitHub Copilot configurations across multiple developmen
 
 #### Setup
 
-1. **Enable DevMind**
+1. **Enable DevOrb**
    - Open VS Code Settings (`Ctrl/Cmd + ,`)
-   - Search for "DevMind"
+   - Search for "DevOrb"
    - Check "Enable Claude configuration sync across machines"
 
 2. **Authenticate with GitHub**
@@ -32,9 +32,9 @@ Sync your Claude AI and GitHub Copilot configurations across multiple developmen
 
 #### Usage
 
-- **Manual Sync**: Command Palette → "DevMind: Sync Now"
+- **Manual Sync**: Command Palette → "DevOrb: Sync Now"
 - **Auto Sync**: Automatically syncs when files change (configurable)
-- **Status Check**: Command Palette → "DevMind: Show Status"
+- **Status Check**: Command Palette → "DevOrb: Show Status"
 
 #### Security
 
@@ -47,9 +47,9 @@ Sync your Claude AI and GitHub Copilot configurations across multiple developmen
 
 ## Commands
 
-- `DevMind: Sync Now` - Manually trigger sync
-- `DevMind: Show Status` - View sync status
-- `DevMind: Open Settings` - Open sync settings
+- `DevOrb: Sync Now` - Manually trigger sync
+- `DevOrb: Show Status` - View sync status
+- `DevOrb: Open Settings` - Open sync settings
 
 ## Requirements
 
@@ -106,19 +106,19 @@ sequenceDiagram
 
       Note over 1PSvc, 1P: Core API Call Sequence
 
-      1PSvc->>1PSvc: ensureDevMindVault()
+      1PSvc->>1PSvc: ensureDevOrbVault()
       alt Vault ID configured
           Note over 1PSvc: Return cached/configured vault ID - NO API CALL
       else No vault configured
           1PSvc->>1P: vaults.list() [rate limited, 3s gap]
           1P-->>1PSvc: vault list
-          1PSvc->>1PSvc: find "DevMind" vault or update config
+          1PSvc->>1PSvc: find "DevOrb" vault or update config
       end
 
       1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
       1P-->>1PSvc: all items in vault
 
-      1PSvc->>1PSvc: filter items (devmind tag + active state)
+      1PSvc->>1PSvc: filter items (devorb tag + active state)
 
       Note over 1PSvc, 1P: Parallel Detail Fetching
 
@@ -152,7 +152,7 @@ sequenceDiagram
       User->>Ext: Update secret value
       Ext->>EnvSvc: updateSecretValue(itemId, newValue)
       EnvSvc->>1PSvc: updateSecretValue()
-      1PSvc->>1PSvc: ensureDevMindVault() [cached - no API call]
+      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
       1PSvc->>1P: items.get(vaultId, itemId) [rate limited, 3s gap]
       1P-->>1PSvc: current item
       1PSvc->>1P: items.put(updatedItem) [rate limited, 3s gap]
@@ -161,7 +161,7 @@ sequenceDiagram
       User->>Ext: Create new secret
       Ext->>EnvSvc: syncSingleVariable()
       EnvSvc->>1PSvc: createOrUpdateSecret()
-      1PSvc->>1PSvc: ensureDevMindVault() [cached - no API call]
+      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
       1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
       1P-->>1PSvc: existing items
       1PSvc->>1PSvc: check for duplicates (local processing)
@@ -171,7 +171,7 @@ sequenceDiagram
       User->>Ext: Delete secret
       Ext->>EnvSvc: deleteSecret()
       EnvSvc->>1PSvc: deleteSecret()
-      1PSvc->>1PSvc: ensureDevMindVault() [cached - no API call]
+      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
       1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
       1P-->>1PSvc: all items
       1PSvc->>1PSvc: find item to delete (local processing)
