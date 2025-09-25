@@ -1,7 +1,7 @@
 {
-  "name": "dev-env-helper",
-  "displayName": "Dev Environment Helper",
-  "description": "A VS Code extension to help make developers' life easier",
+  "name": "devmind",
+  "displayName": "DevMind",
+  "description": "Your dev environment remembers across machines - sync Claude Code, GitHub Copilot, and environment configs",
   "version": "0.0.1",
   "publisher": "jimseiwert",
   "author": {
@@ -10,12 +10,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jimseiwert/dev-env-extension.git"
+    "url": "https://github.com/jimseiwert/devmind.git"
   },
   "bugs": {
-    "url": "https://github.com/jimseiwert/dev-env-extension/issues"
+    "url": "https://github.com/jimseiwert/devmind/issues"
   },
-  "homepage": "https://github.com/jimseiwert/dev-env-extension#readme",
+  "homepage": "https://github.com/jimseiwert/devmind#readme",
   "keywords": [
     "developer",
     "productivity",
@@ -28,16 +28,433 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "main": "./out/extension.js",
   "icon": "icon.png",
   "contributes": {
     "commands": [
       {
-        "command": "dev-env-helper.helloWorld",
-        "title": "Hello World"
+        "command": "devMind.syncNow",
+        "title": "DevMind: Sync Now",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "devMind.showStatus",
+        "title": "DevMind: Show Status",
+        "icon": "$(info)"
+      },
+      {
+        "command": "devMind.openSettings",
+        "title": "DevMind: Open Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "devMind.refreshEnvironment",
+        "title": "Refresh Environment Variables",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devMind.syncAllEnvironment",
+        "title": "Sync All Environment Variables",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "devMind.syncEnvironmentVariable",
+        "title": "Sync Variable",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "devMind.addRemoteSecretToLocal",
+        "title": "Add to Local .env",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "devMind.downloadSecretToEnv",
+        "title": "Download to .env",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "devMind.downloadSecretToAllEnv",
+        "title": "Download to All .env Files",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "devMind.addMissingSecretToFile",
+        "title": "Add to File",
+        "icon": "$(add)"
+      },
+      {
+        "command": "devMind.uploadSecretToGitHub",
+        "title": "Upload to GitHub",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "devMind.removeSecretFromFile",
+        "title": "Remove from File",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "devMind.syncAllSecretsForFile",
+        "title": "Sync All Secrets",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "devMind.resolveSecretConflict",
+        "title": "Resolve Conflict",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "devMind.signUp1Password",
+        "title": "Sign Up for 1Password",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "devMind.setup1Password",
+        "title": "DevMind: Setup 1Password Integration",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "devMind.setServiceAccountToken",
+        "title": "DevMind: Set 1Password Service Account Token",
+        "icon": "$(key)"
+      },
+      {
+        "command": "devMind.clearServiceAccountToken",
+        "title": "DevMind: Clear 1Password Service Account Token",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "devMind.selectVault",
+        "title": "DevMind: Select 1Password Vault",
+        "icon": "$(database)"
+      },
+      {
+        "command": "devMind.testAutoSync",
+        "title": "DevMind: Test Auto-Sync (Debug)",
+        "icon": "$(debug)"
       }
-    ]
+    ],
+    "configuration": [
+      {
+        "title": "General",
+        "properties": {
+          "devMind.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable DevMind"
+          },
+          "devMind.autoSync": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically sync when files change",
+            "enablement": "config.devMind.enabled"
+          }
+        }
+      },
+      {
+        "title": "Claude Code",
+        "properties": {
+          "devMind.claude.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable Claude configuration sync across machines",
+            "enablement": "config.devMind.enabled"
+          },
+          "devMind.claude.gists.settings": {
+            "type": "string",
+            "description": "GitHub Gist ID for Claude settings sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.gists.agents": {
+            "type": "string",
+            "description": "GitHub Gist ID for Claude subagents and hooks sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.gists.commands": {
+            "type": "string",
+            "description": "GitHub Gist ID for Claude slash commands sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.gists.plugins": {
+            "type": "string",
+            "description": "GitHub Gist ID for Claude plugins sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.gists.projects": {
+            "type": "string",
+            "description": "GitHub Gist ID for CLAUDE.md project files sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.syncInterval": {
+            "type": "number",
+            "default": 30,
+            "description": "Sync interval in minutes",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.syncItems.settings": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync Claude settings.json",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.syncItems.subagents": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync Claude subagents.json",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.syncItems.hooks": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync Claude hooks.json",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.syncItems.slashCommands": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync custom slash commands",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.syncItems.plugins": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync plugin configurations",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          },
+          "devMind.claude.syncItems.claudeMd": {
+            "type": "boolean",
+            "default": false,
+            "description": "Sync CLAUDE.md project files",
+            "enablement": "config.devMind.enabled && config.devMind.claude.enabled"
+          }
+        }
+      },
+      {
+        "title": "GitHub Copilot",
+        "properties": {
+          "devMind.copilot.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable GitHub Copilot configuration sync across machines",
+            "enablement": "config.devMind.enabled"
+          },
+          "devMind.copilot.gists.instructions": {
+            "type": "string",
+            "description": "GitHub Gist ID for Copilot instructions sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.gists.prompts": {
+            "type": "string",
+            "description": "GitHub Gist ID for Copilot prompt files sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.gists.settings": {
+            "type": "string",
+            "description": "GitHub Gist ID for Copilot extension settings sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.gists.history": {
+            "type": "string",
+            "description": "GitHub Gist ID for Copilot chat history sync (auto-generated)",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.autoSync": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically sync Copilot settings when they change",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.syncInterval": {
+            "type": "number",
+            "default": 30,
+            "description": "Copilot sync interval in minutes",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.syncItems.personalInstructions": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync personal custom instructions for Copilot Chat",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.syncItems.orgInstructions": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync organization custom instructions for Copilot Chat",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.syncItems.promptFiles": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync .copilot-instructions.md and other prompt files",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.syncItems.chatHistory": {
+            "type": "boolean",
+            "default": false,
+            "description": "Sync Copilot Chat conversation history",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.syncItems.extensionSettings": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync Copilot extension preferences and settings",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          },
+          "devMind.copilot.syncItems.shortcuts": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sync Copilot keyboard shortcuts and commands",
+            "enablement": "config.devMind.enabled && config.devMind.copilot.enabled"
+          }
+        }
+      },
+      {
+        "title": "Environment Variables",
+        "properties": {
+          "devMind.env.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable environment variable syncing via 1Password",
+            "enablement": "config.devMind.enabled"
+          },
+          "devMind.env.onePassword.serviceAccountToken": {
+            "type": "string",
+            "markdownDescription": "🔐 **1Password Service Account Token** (starts with `ops_`)\n\n📝 **How to use:** Paste your token here and save settings. It will be automatically moved to secure storage and this field will be cleared.\n\n🔗 **Get a token:** Create a Service Account at [1Password Developer Console](https://developer.1password.com/docs/service-accounts/)",
+            "default": "",
+            "pattern": "^(ops_.*|)$",
+            "patternErrorMessage": "Service Account Token must start with 'ops_' or be empty",
+            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+          },
+          "devMind.env.onePassword.tokenStatus": {
+            "type": "string",
+            "markdownDescription": "**Token Status** - Shows whether a Service Account Token is currently stored securely",
+            "default": "❌ No token configured",
+            "readOnly": true,
+            "enablement": "false"
+          },
+          "devMind.env.onePassword.vaultId": {
+            "type": "string",
+            "markdownDescription": "**1Password Vault ID** for environment variables  \n\n💡 **Tip:** Use the command `DevMind: Select 1Password Vault` to browse and choose from your available vaults",
+            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+          },
+          "devMind.env.secretPrefix": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "**Optional prefix** for 1Password items. Supports VS Code variables like `${workspaceFolderBasename}` or `${env:USER}`. Leave empty for no prefix.",
+            "pattern": "^([a-zA-Z0-9_\\-${}\\.]+|)$",
+            "patternErrorMessage": "Prefix must contain only letters, numbers, underscores, hyphens, and VS Code variables",
+            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+          },
+          "devMind.env.autoSync": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "**Automatically sync** environment variables when .env files change. When enabled, changes to .env files are automatically synced with 1Password.",
+            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+          },
+          "devMind.env.autoCreateFiles": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "**Automatically create missing .env files** from 1Password secrets when the extension starts.",
+            "enablement": "config.devMind.enabled && config.devMind.env.enabled"
+          }
+        }
+      }
+    ],
+    "views": {
+      "devMindPanel": [
+        {
+          "id": "devMind.environmentView",
+          "name": "Environment Variables",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "devMindPanel",
+          "title": "DevMind",
+          "icon": "$(cloud)"
+        }
+      ]
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "devMind.syncNow"
+        },
+        {
+          "command": "devMind.showStatus"
+        },
+        {
+          "command": "devMind.openSettings"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "devMind.refreshEnvironment",
+          "when": "view == devMind.environmentView",
+          "group": "navigation"
+        },
+        {
+          "command": "devMind.syncAllEnvironment",
+          "when": "view == devMind.environmentView",
+          "group": "navigation"
+        },
+        {
+          "command": "devMind.syncAllSecretsForFile",
+          "when": "view == devMind.environmentView && viewItem == envFile",
+          "group": "inline"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "devMind.syncEnvironmentVariable",
+          "when": "view == devMind.environmentView && viewItem == envVariable",
+          "group": "inline"
+        },
+        {
+          "command": "devMind.addRemoteSecretToLocal",
+          "when": "view == devMind.environmentView && viewItem == remoteSecret",
+          "group": "inline"
+        },
+        {
+          "command": "devMind.downloadSecretToEnv",
+          "when": "view == devMind.environmentView && viewItem == onePasswordSecret",
+          "group": "inline@1"
+        },
+        {
+          "command": "devMind.downloadSecretToAllEnv",
+          "when": "view == devMind.environmentView && viewItem == onePasswordSecret",
+          "group": "inline@2"
+        },
+        {
+          "command": "devMind.addMissingSecretToFile",
+          "when": "view == devMind.environmentView && viewItem == missingSecret",
+          "group": "inline"
+        },
+        {
+          "command": "devMind.uploadSecretToGitHub",
+          "when": "view == devMind.environmentView && viewItem == localOnlySecret",
+          "group": "inline@1"
+        },
+        {
+          "command": "devMind.removeSecretFromFile",
+          "when": "view == devMind.environmentView && (viewItem == syncedSecret || viewItem == localOnlySecret || viewItem == conflictedSecret)",
+          "group": "inline@2"
+        },
+        {
+          "command": "devMind.resolveSecretConflict",
+          "when": "view == devMind.environmentView && viewItem == conflictedSecret",
+          "group": "inline@1"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -46,9 +463,14 @@
     "package": "vsce package",
     "publish": "vsce publish"
   },
+  "dependencies": {
+    "@1password/sdk": "^0.3.1",
+    "node-fetch": "^2.7.0"
+  },
   "devDependencies": {
-    "@types/vscode": "^1.74.0",
     "@types/node": "16.x",
+    "@types/node-fetch": "^2.6.13",
+    "@types/vscode": "^1.74.0",
     "typescript": "^4.9.4",
     "vsce": "^2.15.0"
   }

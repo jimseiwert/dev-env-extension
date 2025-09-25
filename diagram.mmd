@@ -1,73 +1,3 @@
-# DevMind
-
-Your dev environment remembers across machines. DevMind syncs Claude AI, GitHub Copilot, and environment configurations seamlessly between your development setups.
-
-## Features
-
-### AI Assistant Sync
-
-Sync your Claude AI and GitHub Copilot configurations across multiple development machines using GitHub Gists. This includes:
-
-- **Settings** - Claude global settings (`settings.json`)
-- **Subagents** - Custom subagent definitions (`subagents.json`)
-- **Hooks** - Hook configurations (`hooks.json`)
-- **Slash Commands** - Custom slash command scripts
-- **Plugins** - Plugin configurations
-- **Project Memory** - CLAUDE.md files (optional)
-
-#### Setup
-
-1. **Enable DevMind**
-   - Open VS Code Settings (`Ctrl/Cmd + ,`)
-   - Search for "DevMind"
-   - Check "Enable Claude configuration sync across machines"
-
-2. **Authenticate with GitHub**
-   - VS Code will automatically prompt you to sign in to GitHub when needed
-   - Grant permission for `gist` access when prompted
-
-3. **Choose Sync Items**
-   - Select which Claude configurations to sync
-   - By default, all core settings are enabled
-
-#### Usage
-
-- **Manual Sync**: Command Palette → "DevMind: Sync Now"
-- **Auto Sync**: Automatically syncs when files change (configurable)
-- **Status Check**: Command Palette → "DevMind: Show Status"
-
-#### Security
-
-- Uses private GitHub Gists for storage
-- Excludes sensitive/machine-specific files:
-  - Session data (`statsig/`)
-  - Conversation history (`.jsonl` files)
-  - IDE locks and temporary files
-  - Shell snapshots
-
-## Commands
-
-- `DevMind: Sync Now` - Manually trigger sync
-- `DevMind: Show Status` - View sync status
-- `DevMind: Open Settings` - Open sync settings
-
-## Requirements
-
-- GitHub account for Gist storage
-- Claude AI and/or GitHub Copilot (depending on what you want to sync)
-
-## Release Notes
-
-### 0.0.1
-
-- Initial release
-- Claude AI configuration sync via GitHub Gists
-- GitHub Copilot configuration sync support
-- Environment file detection and management
-- Configurable sync options with auto-sync
-- Cross-machine development environment consistency
-
- ```mermaid
 sequenceDiagram
       participant User as User
       participant Ext as VS Code Extension
@@ -198,4 +128,3 @@ sequenceDiagram
           1P-->>1PSvc: Success
           1PSvc->>1PSvc: 3s minimum gap before next call
       end
-```      
