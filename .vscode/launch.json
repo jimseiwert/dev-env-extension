@@ -6,8 +6,11 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
-			]
-		}
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"${workspaceFolder}/test-workspace"
+			],
+			"preLaunchTask": "npm: compile"
+		},
+		
 	]
 }
