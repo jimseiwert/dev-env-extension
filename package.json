@@ -2,7 +2,7 @@
   "name": "devorb",
   "displayName": "DevOrb",
   "description": "Your dev environment remembers across machines - sync Claude Code, GitHub Copilot, and environment configs",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "jimseiwert",
   "author": {
     "name": "Jim Seiwert"
