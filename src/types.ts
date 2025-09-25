@@ -1,6 +1,13 @@
 export interface SyncConfig {
   enabled: boolean;
-  gistId?: string;
+  gists: {
+    settings?: string;
+    agents?: string;
+    commands?: string;
+    plugins?: string;
+    projects?: string;
+    [key: string]: string | undefined; // Allow dynamic gist types
+  };
   syncItems: {
     settings: boolean;
     subagents: boolean;
