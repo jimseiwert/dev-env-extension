@@ -1,0 +1,71 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main brain gradient -->
+    <radialGradient id="brainGrad" cx="0.3" cy="0.3">
+      <stop offset="0%" stop-color="#4FC3F7"/>
+      <stop offset="70%" stop-color="#0288D1"/>
+      <stop offset="100%" stop-color="#01579B"/>
+    </radialGradient>
+
+    <!-- Connection gradient -->
+    <linearGradient id="connGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#66BB6A"/>
+      <stop offset="100%" stop-color="#388E3C"/>
+    </linearGradient>
+
+    <!-- Sync arrow gradient -->
+    <linearGradient id="syncGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFB74D"/>
+      <stop offset="100%" stop-color="#F57C00"/>
+    </linearGradient>
+
+    <!-- Arrow marker definition -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="3"
+            markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="url(#syncGrad)"/>
+    </marker>
+  </defs>
+
+  <!-- Dark background with rounded corners -->
+  <rect width="128" height="128" rx="20" fill="#0D1117"/>
+
+  <!-- Main brain/mind symbol -->
+  <path d="M32 50 Q28 42, 38 40 Q45 35, 55 40 Q64 32, 75 40 Q85 35, 95 42 Q100 50, 95 60 Q100 70, 95 78 Q85 85, 75 80 Q64 88, 55 80 Q45 85, 38 78 Q28 70, 32 60 Q28 52, 32 50 Z"
+        fill="url(#brainGrad)"
+        stroke="#0288D1"
+        stroke-width="1.5"/>
+
+  <!-- Network connections -->
+  <g stroke="url(#connGrad)" stroke-width="2.5" fill="none">
+    <!-- Main connection lines -->
+    <line x1="64" y1="60" x2="25" y2="30" opacity="0.8"/>
+    <line x1="64" y1="60" x2="103" y2="30" opacity="0.8"/>
+    <line x1="64" y1="60" x2="25" y2="90" opacity="0.8"/>
+    <line x1="64" y1="60" x2="103" y2="90" opacity="0.8"/>
+
+    <!-- Connection nodes -->
+    <circle cx="25" cy="30" r="5" fill="#4CAF50" stroke="none"/>
+    <circle cx="103" cy="30" r="5" fill="#4CAF50" stroke="none"/>
+    <circle cx="25" cy="90" r="5" fill="#4CAF50" stroke="none"/>
+    <circle cx="103" cy="90" r="5" fill="#4CAF50" stroke="none"/>
+  </g>
+
+  <!-- Sync symbol -->
+  <g stroke="url(#syncGrad)" stroke-width="3.5" fill="none">
+    <!-- Curved sync arrows around the brain -->
+    <path d="M 45 45 Q 35 35, 50 32 Q 65 35, 55 45"
+          stroke-linecap="round"
+          marker-end="url(#arrow)"/>
+    <path d="M 83 75 Q 93 85, 78 88 Q 63 85, 73 75"
+          stroke-linecap="round"
+          marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- Corner accent elements -->
+  <g fill="#7C3AED" opacity="0.4">
+    <circle cx="15" cy="15" r="3"/>
+    <circle cx="113" cy="15" r="3"/>
+    <circle cx="15" cy="113" r="3"/>
+    <circle cx="113" cy="113" r="3"/>
+  </g>
+</svg>
