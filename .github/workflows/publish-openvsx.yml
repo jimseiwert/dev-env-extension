@@ -1,4 +1,4 @@
-name: Publish-Msft Marketplace
+name: Publish-Open VSX
 
 on:
   release:
@@ -37,13 +37,16 @@ jobs:
     - name: Package Extension
       run: npm run package
 
-    - name: Publish to VS Code Marketplace
-      run: npm run publish
+    - name: Install Open VSX CLI
+      run: npm install -g ovsx
+
+    - name: Publish to Open VSX Registry
+      run: ovsx publish *.vsix
       env:
-        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        OVSX_PAT: ${{ secrets.OVSX_PAT }}
 
     - name: Upload VSIX as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: extension-vsix
+        name: extension-vsix-openvsx
         path: '*.vsix'
