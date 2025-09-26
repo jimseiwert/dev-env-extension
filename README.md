@@ -115,6 +115,11 @@ Found a bug? Want a feature? We'd love your help!
 
 ## 🎉 Release Notes
 
+### 1.0.2 - The "Automated Publishing" Update
+- 🤖 Fully automated semantic versioning with branch-based version detection
+- 🚀 Automatic publishing to both VS Code Marketplace and OpenVSX Registry
+- 🔄 Smart release workflows that detect feature/ and fix/ branches
+
 ### 1.0.0 - The "Finally Ready for Prime Time" Release
 - 🎯 Full 1Password integration with service account support
 - 🔄 Automatic environment file detection and syncing
