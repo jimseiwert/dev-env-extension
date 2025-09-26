@@ -115,6 +115,11 @@ Found a bug? Want a feature? We'd love your help!
 
 ## 🎉 Release Notes
 
+### 1.0.3 - Testing Release
+- 🧪 Testing the complete automated publishing workflow
+- ✅ Verified branch-based version detection works correctly
+- 🔍 Confirmed semantic release generation from PR branch names
+
 ### 1.0.2 - The "Automated Publishing" Update
 - 🤖 Fully automated semantic versioning with branch-based version detection
 - 🚀 Automatic publishing to both VS Code Marketplace and OpenVSX Registry
