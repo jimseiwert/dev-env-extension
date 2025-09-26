@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { EnvironmentService } from '../services';
-import { EnvironmentViewProvider } from '../providers';
 import { AutoSyncService } from '../services/autoSyncService';
 import { StatusBarManager } from '../managers/statusBarManager';
+import { FileDecorator } from '../decorators/fileDecorator';
 
 export class CommandRegistry {
   constructor(
     private envService: EnvironmentService,
-    private environmentViewProvider: EnvironmentViewProvider,
     private autoSyncService: AutoSyncService,
-    private statusBarManager?: StatusBarManager
+    private statusBarManager?: StatusBarManager,
+    private fileDecorator?: FileDecorator
   ) {}
 
   public registerAllCommands(): vscode.Disposable[] {
@@ -29,15 +29,19 @@ export class CommandRegistry {
   private registerEnvironmentCommands(): vscode.Disposable[] {
     return [
       vscode.commands.registerCommand('devOrb.refreshEnvironment', async () => {
-        await this.environmentViewProvider.refresh();
+        this.fileDecorator?.refreshAll();
       }),
 
       vscode.commands.registerCommand('devOrb.syncAllEnvironment', async () => {
         await this.handleSyncAllEnvFiles();
       }),
 
-      vscode.commands.registerCommand('devOrb.syncEnvironmentFile', async (item) => {
-        await this.handleSyncEnvironmentFile(item);
+      vscode.commands.registerCommand('devOrb.syncEnvironmentFile', async (uri?: vscode.Uri) => {
+        await this.handleSyncEnvironmentFile(uri);
+      }),
+
+      vscode.commands.registerCommand('devOrb.downloadEnvironmentFile', async (uri?: vscode.Uri) => {
+        await this.handleDownloadEnvironmentFile(uri);
       }),
 
       vscode.commands.registerCommand('devOrb.createMissingEnvFiles', async () => {
@@ -46,6 +50,16 @@ export class CommandRegistry {
 
       vscode.commands.registerCommand('devOrb.testAutoSync', async () => {
         await this.handleTestAutoSync();
+      }),
+
+      vscode.commands.registerCommand('devOrb.refreshSyncStatus', async () => {
+        await this.handleRefreshSyncStatus();
+      }),
+
+      // Hook into common refresh patterns
+      vscode.commands.registerCommand('devOrb.workspaceRefresh', async () => {
+        console.log('🔄 DevOrb workspace refresh triggered');
+        await this.handleRefreshSyncStatus();
       })
     ];
   }
@@ -143,7 +157,7 @@ export class CommandRegistry {
       try {
         await this.envService.setServiceAccountToken(token);
         await this.envService.initialize();
-        await this.environmentViewProvider.refresh();
+        this.fileDecorator?.refreshAll();
         vscode.window.showInformationMessage('✅ 1Password Service Account Token saved securely!');
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to save token: ${error instanceof Error ? error.message : String(error)}`);
@@ -161,7 +175,7 @@ export class CommandRegistry {
     if (confirm === 'Clear Token') {
       try {
         await this.envService.clearServiceAccountToken();
-        await this.environmentViewProvider.refresh();
+        this.fileDecorator?.refreshAll();
         vscode.window.showInformationMessage('✅ 1Password Service Account Token cleared');
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to clear token: ${error instanceof Error ? error.message : String(error)}`);
@@ -207,7 +221,7 @@ export class CommandRegistry {
         const config = vscode.workspace.getConfiguration('devOrb.env');
         await config.update('onePassword.vaultId', selected.description, vscode.ConfigurationTarget.Global);
         vscode.window.showInformationMessage(`✅ Selected vault: ${selected.label} (${selected.description})`);
-        await this.environmentViewProvider.refresh();
+        this.fileDecorator?.refreshAll();
       }
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to list vaults: ${error instanceof Error ? error.message : String(error)}`);
@@ -226,7 +240,15 @@ export class CommandRegistry {
       return;
     }
 
-    const envFiles = await vscode.workspace.findFiles('**/.env*');
+    // Find all local .env files (both .env* and *.env patterns)
+    const dotPrefixFiles = await vscode.workspace.findFiles('**/.env*');
+    const dotSuffixFiles = await vscode.workspace.findFiles('**/*.env');
+
+    // Combine and deduplicate
+    const allFiles = [...dotPrefixFiles, ...dotSuffixFiles];
+    const envFiles = allFiles.filter((file, index, arr) =>
+      arr.findIndex(f => f.fsPath === file.fsPath) === index
+    );
     if (envFiles.length === 0) {
       vscode.window.showErrorMessage('No .env files found in workspace');
       return;
@@ -256,7 +278,7 @@ export class CommandRegistry {
       });
 
       vscode.window.showInformationMessage('✅ All .env files synced with 1Password successfully!');
-      await this.environmentViewProvider.refresh();
+      this.fileDecorator?.refreshAll();
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to sync .env files: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
@@ -264,17 +286,86 @@ export class CommandRegistry {
     }
   }
 
-  private async handleSyncEnvironmentFile(item: any): Promise<void> {
-    const filePath = item?.resourceUri?.fsPath;
-    if (!filePath) {
-      vscode.window.showErrorMessage('Invalid file data.');
+  private async handleSyncEnvironmentFile(uri?: vscode.Uri): Promise<void> {
+    let filePath: string;
+
+    if (uri) {
+      filePath = uri.fsPath;
+    } else {
+      // Fallback to active editor if no URI provided
+      const activeEditor = vscode.window.activeTextEditor;
+      if (!activeEditor) {
+        vscode.window.showErrorMessage('No file selected or active.');
+        return;
+      }
+      filePath = activeEditor.document.uri.fsPath;
+    }
+
+    await this.handleSyncSingleEnvFile(filePath, uri);
+  }
+
+  private async handleDownloadEnvironmentFile(uri?: vscode.Uri): Promise<void> {
+    let filePath: string;
+
+    if (uri) {
+      filePath = uri.fsPath;
+    } else {
+      // Fallback to active editor if no URI provided
+      const activeEditor = vscode.window.activeTextEditor;
+      if (!activeEditor) {
+        vscode.window.showErrorMessage('No file selected or active.');
+        return;
+      }
+      filePath = activeEditor.document.uri.fsPath;
+    }
+
+    const isConfigured = await this.envService.isConfigured();
+    if (!isConfigured) {
+      vscode.window.showErrorMessage('1Password not configured. Please configure 1Password first.');
       return;
     }
 
-    await this.handleSyncSingleEnvFile(filePath);
+    try {
+      const fileName = path.basename(filePath);
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Downloading ${fileName} from 1Password...`,
+        cancellable: false
+      }, async () => {
+        // Get remote files and find matching file
+        const remoteFiles = await this.envService.getRemoteEnvFiles();
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri || vscode.Uri.file(filePath));
+
+        if (!workspaceFolder) {
+          throw new Error('File is not in a workspace folder');
+        }
+
+        const relativePath = path.relative(workspaceFolder.uri.fsPath, filePath);
+        const remoteFile = remoteFiles.find(rf =>
+          rf.metadata.filePath === relativePath || path.basename(rf.metadata.filePath) === fileName
+        );
+
+        if (!remoteFile) {
+          throw new Error(`No remote version found for ${fileName}`);
+        }
+
+        // Create/update local file with remote content
+        await this.envService.createLocalFileFromRemote(remoteFile);
+      });
+
+      vscode.window.showInformationMessage(`✅ ${fileName} downloaded from 1Password successfully!`);
+      if (uri) {
+        this.fileDecorator?.refreshFile(uri);
+      } else {
+        this.fileDecorator?.refreshAll();
+      }
+    } catch (error) {
+      const fileName = path.basename(filePath);
+      vscode.window.showErrorMessage(`Failed to download ${fileName}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
-  private async handleSyncSingleEnvFile(filePath: string): Promise<void> {
+  private async handleSyncSingleEnvFile(filePath: string, uri?: vscode.Uri): Promise<void> {
     const isConfigured = await this.envService.isConfigured();
     if (!isConfigured) {
       vscode.window.showErrorMessage('1Password not configured. Please configure 1Password first.');
@@ -294,7 +385,11 @@ export class CommandRegistry {
       });
 
       vscode.window.showInformationMessage(`✅ ${fileName} synced to 1Password successfully!`);
-      await this.environmentViewProvider.refresh();
+      if (uri) {
+        this.fileDecorator?.refreshFile(uri);
+      } else {
+        this.fileDecorator?.refreshAll();
+      }
     } catch (error) {
       const fileName = path.basename(filePath);
       vscode.window.showErrorMessage(`Failed to sync ${fileName}: ${error instanceof Error ? error.message : String(error)}`);
@@ -320,9 +415,55 @@ export class CommandRegistry {
       });
 
       vscode.window.showInformationMessage('✅ Missing .env files created from 1Password!');
-      await this.environmentViewProvider.refresh();
+      this.fileDecorator?.refreshAll();
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to create missing files: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async handleRefreshSyncStatus(): Promise<void> {
+    console.log('🔄 Manual refresh sync status triggered');
+
+    try {
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'Refreshing DevOrb sync status...',
+        cancellable: false
+      }, async (progress) => {
+        progress.report({ increment: 0, message: 'Checking configuration...' });
+
+        const isConfigured = await this.envService.isConfigured();
+        if (!isConfigured) {
+          progress.report({ increment: 50, message: '1Password not configured, refreshing decorations only...' });
+          console.log('⏸️ 1Password not configured, refreshing file decorations only');
+          this.fileDecorator?.refreshAll();
+          await this.statusBarManager?.updateStatusBar();
+          return;
+        }
+
+        progress.report({ increment: 25, message: 'Syncing missing files from 1Password...' });
+        await this.autoSyncService.autoCreateMissingEnvFiles();
+
+        progress.report({ increment: 75, message: 'Refreshing file decorations...' });
+        this.fileDecorator?.refreshAll();
+        await this.statusBarManager?.updateStatusBar();
+
+        progress.report({ increment: 100, message: 'Complete!' });
+      });
+
+      const isConfigured = await this.envService.isConfigured();
+      if (isConfigured) {
+        vscode.window.showInformationMessage('✅ DevOrb sync status refreshed and files synchronized!');
+      } else {
+        vscode.window.showInformationMessage('🔄 DevOrb file decorations refreshed. Configure 1Password to enable full sync.');
+      }
+    } catch (error) {
+      console.error('Failed to refresh sync status:', error);
+      // Still refresh decorations even if sync failed
+      this.fileDecorator?.refreshAll();
+      await this.statusBarManager?.updateStatusBar();
+
+      vscode.window.showErrorMessage(`Failed to refresh sync: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

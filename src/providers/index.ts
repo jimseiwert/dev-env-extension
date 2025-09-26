@@ -1,1 +1,1 @@
-export { EnvironmentViewProvider } from './environmentViewProvider';
+// No providers currently exported

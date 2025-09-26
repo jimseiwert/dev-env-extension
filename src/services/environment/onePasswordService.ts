@@ -37,23 +37,74 @@ export class OnePasswordService {
 
     this.lastApiCall = Date.now();
 
-    try {
-      return await apiCall();
-    } catch (error) {
-      // If it's a rate limit error, wait a bit longer and try once more
-      if (error && typeof error === 'object' && 'message' in error &&
-          (error.message as string).toLowerCase().includes('rate limit')) {
+    const maxRetries = 3;
+    let attempt = 0;
 
-        console.warn('⏳ 1Password rate limit reached, waiting 5 seconds before retry...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        // Single retry attempt
-        this.lastApiCall = Date.now();
+    while (attempt < maxRetries) {
+      try {
         return await apiCall();
+      } catch (error) {
+        attempt++;
+        const isRetryableError = this.isRetryableError(error);
+
+        if (attempt >= maxRetries || !isRetryableError) {
+          console.error(`❌ 1Password API call failed after ${attempt} attempts:`, error);
+          throw error;
+        }
+
+        const backoffDelay = this.getBackoffDelay(attempt, error);
+        console.warn(`⏳ 1Password API error (attempt ${attempt}/${maxRetries}), retrying in ${backoffDelay}ms...`, error);
+
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+        this.lastApiCall = Date.now();
+      }
+    }
+
+    throw new Error('Max retries exceeded');
+  }
+
+  private isRetryableError(error: any): boolean {
+    if (!error || typeof error !== 'object' || !('message' in error)) {
+      return false;
+    }
+
+    const message = (error.message as string).toLowerCase();
+
+    // Retry on these conditions:
+    return (
+      message.includes('rate limit') ||
+      message.includes('504') ||
+      message.includes('gateway timeout') ||
+      message.includes('timeout') ||
+      message.includes('502') ||
+      message.includes('bad gateway') ||
+      message.includes('503') ||
+      message.includes('service unavailable') ||
+      message.includes('connection') ||
+      message.includes('network')
+    );
+  }
+
+  private getBackoffDelay(attempt: number, error: any): number {
+    // Base backoff with exponential increase
+    const baseDelay = 2000; // 2 seconds
+    const exponentialDelay = baseDelay * Math.pow(2, attempt - 1);
+
+    // Special handling for rate limits and gateway timeouts
+    if (error && typeof error === 'object' && 'message' in error) {
+      const message = (error.message as string).toLowerCase();
+
+      if (message.includes('rate limit')) {
+        return 5000; // 5 seconds for rate limits
       }
 
-      throw error;
+      if (message.includes('504') || message.includes('gateway timeout')) {
+        return Math.min(10000, exponentialDelay); // Up to 10 seconds for gateway timeouts
+      }
     }
+
+    // Cap at 8 seconds max
+    return Math.min(8000, exponentialDelay);
   }
 
 
@@ -159,7 +210,7 @@ export class OnePasswordService {
 
     // Check cached vault first
     if (this.vaultCache && (Date.now() - this.vaultCache.timestamp) < this.secretsCacheTTL) {
-      console.log('Using cached vault ID');
+      // Using cached vault ID
       return this.vaultCache.vaultId;
     }
 
@@ -687,7 +738,7 @@ export class OnePasswordService {
 
       const itemParams: ItemCreateParams = {
         vaultId,
-        category: ItemCategory.Document,
+        category: ItemCategory.SecureNote,
         title: `DevOrb Env: ${metadata.repoName}/${fileName}`,
         fields: [
           {
@@ -791,7 +842,7 @@ export class OnePasswordService {
       const envFileItems = items.filter(item =>
         item.tags.includes('env-file') &&
         item.tags.includes(`repo:${repoName}`) &&
-        item.category === ItemCategory.Document
+        item.category === ItemCategory.SecureNote
       );
 
       for (const item of envFileItems) {
@@ -826,8 +877,15 @@ export class OnePasswordService {
       const envFileItems = items.filter(item =>
         item.tags.includes('env-file') &&
         item.tags.includes(`repo:${repoName}`) &&
-        item.category === ItemCategory.Document
+        item.category === ItemCategory.SecureNote
       );
+
+      console.log(`🔍 Found ${envFileItems.length} env file(s) for repo "${repoName}"`);
+      if (envFileItems.length > 0) {
+        envFileItems.forEach(item => {
+          console.log(`   - "${item.title}"`);
+        });
+      }
 
       const syncedFiles: import('../../types').SyncedEnvFile[] = [];
 
@@ -844,7 +902,8 @@ export class OnePasswordService {
           const lastModified = getFieldValue('Last Modified');
           const hash = getFieldValue('Hash');
 
-          if (content && filePath) {
+          if (content !== undefined && filePath) {
+            console.log(`✅ Found env file: ${filePath} (${content.length} chars)`);
             syncedFiles.push({
               content,
               metadata: {
@@ -856,6 +915,8 @@ export class OnePasswordService {
               },
               itemId: item.id
             });
+          } else {
+            console.warn(`⚠️ Skipping item "${item.title}" - missing required fields`);
           }
         } catch (error) {
           console.warn(`Could not load env file item ${item.id}:`, error);

@@ -1,28 +1,28 @@
 import * as vscode from 'vscode';
 import { EnvironmentService } from '../services';
-import { EnvironmentViewProvider } from '../providers';
 import { CommandRegistry } from '../commands/commandRegistry';
 import { AutoSyncService } from '../services/autoSyncService';
 import { StatusBarManager } from './statusBarManager';
+import { FileDecorator } from '../decorators/fileDecorator';
 
 export class ExtensionManager {
   private envService: EnvironmentService;
-  private environmentViewProvider: EnvironmentViewProvider;
   private commandRegistry: CommandRegistry;
   private autoSyncService: AutoSyncService;
   private statusBarManager: StatusBarManager;
+  private fileDecorator: FileDecorator;
   private configChangeTimeout?: NodeJS.Timeout;
 
   constructor(private context: vscode.ExtensionContext) {
     this.envService = new EnvironmentService(context.secrets);
-    this.environmentViewProvider = new EnvironmentViewProvider(this.envService);
     this.statusBarManager = new StatusBarManager(this.envService);
-    this.autoSyncService = new AutoSyncService(this.envService, this.environmentViewProvider, this.statusBarManager);
+    this.fileDecorator = new FileDecorator(this.envService);
+    this.autoSyncService = new AutoSyncService(this.envService, this.fileDecorator, this.statusBarManager);
     this.commandRegistry = new CommandRegistry(
       this.envService,
-      this.environmentViewProvider,
       this.autoSyncService,
-      this.statusBarManager
+      this.statusBarManager,
+      this.fileDecorator
     );
   }
 
@@ -40,28 +40,18 @@ export class ExtensionManager {
   private async initializeServices(): Promise<void> {
     // Initialize DevOrb Services
     await this.envService.initialize();
-
-    // Set up callback for when remote data is loaded
-    this.environmentViewProvider.setRemoteDataLoadedCallback(async () => {
-      await this.onRemoteDataLoaded();
-    });
   }
 
   private setupUI(): Promise<void> {
     const environment = this.isRunningInDevContainer() ? 'Dev Container' : 'Host';
 
-    // Register the tree view
-    const environmentView = vscode.window.createTreeView('devOrb.environmentView', {
-      treeDataProvider: this.environmentViewProvider,
-      showCollapseAll: true
-    });
-
+    // Register file decorator for .env files
+    this.context.subscriptions.push(
+      vscode.window.registerFileDecorationProvider(this.fileDecorator)
+    );
 
     // Show initial toast for debugging
     vscode.window.showInformationMessage(`DevOrb is running in: ${environment}`);
-
-    // Subscribe to disposables
-    this.context.subscriptions.push(environmentView);
 
     return Promise.resolve();
   }
@@ -81,7 +71,21 @@ export class ExtensionManager {
       await this.handleConfigurationChange(e);
     });
 
-    this.context.subscriptions.push(configWatcher);
+    // Add workspace folder change watcher to refresh when switching workspaces
+    const workspaceFolderWatcher = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+      console.log('🔄 Workspace folders changed, refreshing DevOrb sync status...');
+      await this.handleWorkspaceChange();
+    });
+
+    // Listen to window state changes for potential refresh scenarios
+    const windowStateWatcher = vscode.window.onDidChangeWindowState(async (windowState) => {
+      if (windowState.focused) {
+        console.log('🔍 Window gained focus, checking for potential refresh...');
+        await this.handleWindowFocus();
+      }
+    });
+
+    this.context.subscriptions.push(configWatcher, workspaceFolderWatcher, windowStateWatcher);
   }
 
   private async handleConfigurationChange(e: vscode.ConfigurationChangeEvent): Promise<void> {
@@ -106,7 +110,7 @@ export class ExtensionManager {
 
     this.configChangeTimeout = setTimeout(async () => {
       await this.envService.initialize();
-      await this.environmentViewProvider.refresh();
+      this.fileDecorator.refreshAll();
       await this.statusBarManager.updateStatusBar();
     }, 1000);
   }
@@ -147,7 +151,7 @@ export class ExtensionManager {
           vscode.window.showInformationMessage('🔐 1Password Service Account Token saved securely!');
         }
 
-        await this.environmentViewProvider.refresh();
+        this.fileDecorator.refreshAll();
         await this.statusBarManager.updateStatusBar();
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to save token: ${error instanceof Error ? error.message : String(error)}`);
@@ -156,43 +160,77 @@ export class ExtensionManager {
     }
   }
 
-  private async onRemoteDataLoaded(): Promise<void> {
-    // AutoSyncService handles file watching internally
-    await this.autoSyncService.autoCreateMissingEnvFiles();
-    console.log('✅ All initialization complete - remote data loaded and watchers set up');
-  }
-
   private scheduleDelayedInitialization(): void {
-    // Initialize environment view (local data only) after startup delay
+    // Initialize file decorations after startup delay
     setTimeout(async () => {
-      console.log('Performing delayed environment view initialization (local data only)...');
+      console.log('Performing delayed file decorator initialization...');
       try {
-        await this.environmentViewProvider.initialize();
+        this.fileDecorator.refreshAll();
       } catch (error) {
-        console.error('Environment view initialization failed:', error);
+        console.error('File decorator initialization failed:', error);
       }
     }, 1000);
 
-    // Load remote data and set up watchers after longer delay to avoid rate limits
+    // Set up auto sync with longer delay to avoid overwhelming API
     setTimeout(async () => {
-      console.log('Loading remote data and setting up watchers...');
+      console.log('Setting up auto sync...');
       try {
-        await this.environmentViewProvider.loadRemoteDataAndSetupWatchers();
+        const isConfigured = await this.envService.isConfigured();
+        if (isConfigured) {
+          await this.autoSyncService.autoCreateMissingEnvFiles();
+        } else {
+          console.log('DevOrb not configured, skipping auto-sync');
+        }
       } catch (error) {
-        console.error('Failed to load remote data:', error);
+        console.error('Failed to setup auto sync:', error);
+        // This is non-critical - extension should continue working
       }
-    }, 5000);
+    }, 8000); // Increased to 8 seconds to give network/API more time
+  }
 
-    // Schedule initial sync if in dev container
-    if (this.isRunningInDevContainer()) {
-      const mainConfig = vscode.workspace.getConfiguration('devOrb');
-      const claudeConfig = vscode.workspace.getConfiguration('devOrb.claude');
-      if (mainConfig.get('enabled') && claudeConfig.get('enabled') && mainConfig.get('autoSync')) {
-        setTimeout(async () => {
-          await vscode.commands.executeCommand('devOrb.syncNow');
-        }, 5000);
-      }
+  private async handleWorkspaceChange(): Promise<void> {
+    try {
+      // Reinitialize services for new workspace
+      await this.envService.initialize();
+
+      // Refresh file decorations
+      this.fileDecorator.refreshAll();
+
+      // Update status bar
+      await this.statusBarManager.updateStatusBar();
+
+      // If configured, trigger auto-sync after a short delay
+      setTimeout(async () => {
+        try {
+          const isConfigured = await this.envService.isConfigured();
+          if (isConfigured) {
+            await this.autoSyncService.autoCreateMissingEnvFiles();
+          }
+        } catch (error) {
+          console.error('Auto-sync after workspace change failed:', error);
+        }
+      }, 2000);
+
+    } catch (error) {
+      console.error('Workspace change handling failed:', error);
     }
+  }
+
+  private async handleWindowFocus(): Promise<void> {
+    // Debounce rapid focus events
+    if (this.configChangeTimeout) {
+      clearTimeout(this.configChangeTimeout);
+    }
+
+    this.configChangeTimeout = setTimeout(async () => {
+      try {
+        // Only refresh decorations - don't trigger full sync on every focus
+        this.fileDecorator.refreshAll();
+        await this.statusBarManager.updateStatusBar();
+      } catch (error) {
+        console.debug('Window focus handling failed:', error);
+      }
+    }, 1000);
   }
 
   private isRunningInDevContainer(): boolean {
@@ -213,8 +251,8 @@ export class ExtensionManager {
     }
 
     this.envService?.dispose();
-    this.environmentViewProvider?.dispose();
     this.autoSyncService?.dispose();
     this.statusBarManager?.dispose();
+    this.fileDecorator?.dispose();
   }
 }

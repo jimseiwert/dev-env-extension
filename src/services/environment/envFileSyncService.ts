@@ -69,6 +69,7 @@ export class EnvFileSyncService {
       const stats = fs.statSync(filePath);
       const hash = crypto.createHash('sha256').update(content).digest('hex');
 
+
       const metadata: EnvFileMetadata = {
         repoName,
         filePath: relativePath,
@@ -139,7 +140,15 @@ export class EnvFileSyncService {
       return [];
     }
 
-    const envFiles = await vscode.workspace.findFiles('**/.env*', '**/node_modules/**');
+    // Find all local .env files (both .env* and *.env patterns)
+    const dotPrefixFiles = await vscode.workspace.findFiles('**/.env*', '**/node_modules/**');
+    const dotSuffixFiles = await vscode.workspace.findFiles('**/*.env', '**/node_modules/**');
+
+    // Combine and deduplicate
+    const allFiles = [...dotPrefixFiles, ...dotSuffixFiles];
+    const envFiles = allFiles.filter((file, index, arr) =>
+      arr.findIndex(f => f.fsPath === file.fsPath) === index
+    );
     const syncedFiles: SyncedEnvFile[] = [];
 
     for (const fileUri of envFiles) {

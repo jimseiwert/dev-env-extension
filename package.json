@@ -92,6 +92,16 @@
         "command": "devOrb.openSettings",
         "title": "DevOrb: Open Settings",
         "icon": "$(gear)"
+      },
+      {
+        "command": "devOrb.downloadEnvironmentFile",
+        "title": "Download from 1Password",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "devOrb.refreshSyncStatus",
+        "title": "DevOrb: Refresh & Sync Environment Files",
+        "icon": "$(refresh)"
       }
     ],
     "configuration": [
@@ -188,52 +198,35 @@
         }
       }
     ],
-    "views": {
-      "devOrbPanel": [
-        {
-          "id": "devOrb.environmentView",
-          "name": "Environment Variables",
-          "when": "workspaceFolderCount > 0"
-        }
-      ]
-    },
-    "viewsContainers": {
-      "panel": [
-        {
-          "id": "devOrbPanel",
-          "title": "DevOrb",
-          "icon": "$(cloud)"
-        }
-      ]
-    },
     "menus": {
       "commandPalette": [
       ],
-      "view/title": [
-        {
-          "command": "devOrb.refreshEnvironment",
-          "when": "view == devOrb.environmentView",
-          "group": "navigation"
-        },
-        {
-          "command": "devOrb.syncAllEnvironment",
-          "when": "view == devOrb.environmentView",
-          "group": "navigation"
-        },
+      "explorer/context": [
         {
           "command": "devOrb.syncEnvironmentFile",
-          "when": "view == devOrb.environmentView && viewItem == envFile",
-          "group": "inline"
-        }
-      ],
-      "view/item/context": [
+          "when": "resourceExtname == .env || resourceFilename =~ /^\\.env\\./ || resourceFilename =~ /\\.env$/",
+          "group": "devOrb@1"
+        },
         {
-          "command": "devOrb.syncEnvironmentFile",
-          "when": "view == devOrb.environmentView && viewItem == envFile",
-          "group": "inline"
+          "command": "devOrb.downloadEnvironmentFile",
+          "when": "resourceExtname == .env || resourceFilename =~ /^\\.env\\./ || resourceFilename =~ /\\.env$/",
+          "group": "devOrb@2"
+        },
+        {
+          "command": "devOrb.refreshSyncStatus",
+          "when": "explorerResourceIsFolder",
+          "group": "devOrb@3"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "devOrb.refreshSyncStatus",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "!terminalFocus"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

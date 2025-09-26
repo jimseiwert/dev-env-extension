@@ -15,30 +15,60 @@ export class EnvironmentService {
   }
 
   public async initialize(): Promise<void> {
-    await this.onePasswordService.initialize();
+    // Check if we have both token and vault ID before initializing
+    const hasToken = await this.hasServiceAccountToken();
+    const config = vscode.workspace.getConfiguration('devOrb.env');
+    const vaultId = config.get<string>('onePassword.vaultId', '').trim();
+
+    if (hasToken && vaultId) {
+      console.log('🔐 Found token and vault ID, initializing 1Password client...');
+      await this.onePasswordService.initialize();
+      console.log('✅ 1Password client initialized successfully');
+    } else {
+      console.log('⏸️ Skipping 1Password initialization - missing token or vault ID');
+      console.log(`   Token: ${hasToken ? '✅' : '❌'}, Vault ID: ${vaultId ? '✅' : '❌'}`);
+    }
+
     await this.updateTokenStatusSetting();
   }
 
   public async isConfigured(): Promise<boolean> {
-    return this.onePasswordService.isConfigured();
+    const hasToken = await this.hasServiceAccountToken();
+    const config = vscode.workspace.getConfiguration('devOrb.env');
+    const vaultId = config.get<string>('onePassword.vaultId', '').trim();
+
+    return hasToken && !!vaultId;
   }
 
   // File-based sync methods (new approach)
   public async syncAllEnvFiles(): Promise<void> {
+    if (!await this.isConfigured()) {
+      throw new Error('1Password not configured. Please set up your Service Account Token and Vault ID.');
+    }
     console.log('🔄 Starting file-based sync for all .env files...');
     await this.fileSyncService.syncAllFiles();
   }
 
   public async syncSingleEnvFile(filePath: string): Promise<void> {
+    if (!await this.isConfigured()) {
+      throw new Error('1Password not configured. Please set up your Service Account Token and Vault ID.');
+    }
     console.log(`🔄 Syncing single file: ${filePath}`);
     await this.fileSyncService.syncFileToRemote(filePath);
   }
 
   public async createLocalFileFromRemote(remoteFile: SyncedEnvFile): Promise<void> {
+    if (!await this.isConfigured()) {
+      throw new Error('1Password not configured. Please set up your Service Account Token and Vault ID.');
+    }
     await this.fileSyncService.createFileFromRemote(remoteFile);
   }
 
   public async getRemoteEnvFiles(): Promise<SyncedEnvFile[]> {
+    if (!await this.isConfigured()) {
+      return [];
+    }
+
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
       return [];
@@ -138,10 +168,16 @@ export class EnvironmentService {
   }
 
   public async getVaults(): Promise<any[]> {
+    if (!await this.hasServiceAccountToken()) {
+      throw new Error('1Password Service Account Token not configured.');
+    }
     return this.onePasswordService.getVaults();
   }
 
   public async ensureDevOrbVault(): Promise<string> {
+    if (!await this.hasServiceAccountToken()) {
+      throw new Error('1Password Service Account Token not configured.');
+    }
     return this.onePasswordService.ensureDevOrbVault();
   }
 
@@ -191,6 +227,19 @@ export class EnvironmentService {
     console.warn('⚠️ deleteSecret is deprecated with file-based sync');
     // This would require finding the file, removing the variable, and re-syncing
     // For now, just log a warning
+  }
+
+  // Method to access the OnePasswordService for advanced operations like deletion
+  public getOnePasswordService(): OnePasswordService {
+    return this.onePasswordService;
+  }
+
+  public async deleteRemoteEnvFile(itemId: string): Promise<void> {
+    if (!await this.isConfigured()) {
+      throw new Error('1Password not configured. Please set up your Service Account Token and Vault ID.');
+    }
+
+    await this.onePasswordService.deleteEnvFile(itemId);
   }
 
   public dispose(): void {
