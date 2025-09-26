@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { EnvironmentService, EnvVariable, RemoteSecret } from './envService';
+import { EnvironmentService } from '../services/environment';
+import { EnvVariable, RemoteSecret } from '../types';
 
 export class EnvironmentViewProvider implements vscode.TreeDataProvider<EnvironmentItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentItem | undefined | null | void> = new vscode.EventEmitter<EnvironmentItem | undefined | null | void>();
@@ -59,12 +60,14 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
       const isConfigured = await this.envService.isConfigured();
 
       if (isConfigured) {
-        // Make the single API call to get remote secrets
+        // Make the single API call to get remote env files (new file-based approach)
         try {
-          this.remoteSecrets = await this.envService.getRemoteSecrets();
-          console.log(`Loaded ${this.remoteSecrets.length} remote secrets`);
+          const remoteFiles = await this.envService.getRemoteEnvFiles();
+          // Convert to legacy format for backward compatibility
+          this.remoteSecrets = await this.convertFilesToLegacySecrets(remoteFiles);
+          console.log(`Loaded ${this.remoteSecrets.length} remote secrets from ${remoteFiles.length} files`);
         } catch (error) {
-          console.error('Error fetching remote secrets:', error);
+          console.error('Error fetching remote files:', error);
           this.remoteSecrets = [];
         }
       } else {
@@ -154,11 +157,13 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
     const isConfigured = await this.envService.isConfigured();
 
     if (isConfigured) {
-      // Fetch remote 1Password secrets
+      // Fetch remote 1Password files (new file-based approach)
       try {
-        this.remoteSecrets = await this.envService.getRemoteSecrets();
+        const remoteFiles = await this.envService.getRemoteEnvFiles();
+        // Convert to legacy format for backward compatibility
+        this.remoteSecrets = await this.convertFilesToLegacySecrets(remoteFiles);
       } catch (error) {
-        console.error('Error fetching remote secrets:', error);
+        console.error('Error fetching remote files:', error);
         this.remoteSecrets = [];
       }
     } else {
@@ -531,7 +536,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
     }
 
     if (nonConflictingFiles.length === 1) {
-      await this.envService.downloadSecretToLocalFile(nonConflictingFiles[0], secretName, itemId);
+      await this.downloadSecretToLocalFile(nonConflictingFiles[0], secretName, itemId);
       await this.refresh();
       return;
     }
@@ -558,7 +563,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
       if (selected.filePath === '') {
         await this.createNewEnvFileWithSecret(secretName, itemId);
       } else {
-        await this.envService.downloadSecretToLocalFile(selected.filePath, secretName, itemId);
+        await this.downloadSecretToLocalFile(selected.filePath, secretName, itemId);
         await this.refresh();
       }
     }
@@ -575,7 +580,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
     }, async (progress) => {
       for (const filePath of this.environmentFiles) {
         try {
-          await this.envService.downloadSecretToLocalFile(filePath, secretName, itemId);
+          await this.downloadSecretToLocalFile(filePath, secretName, itemId);
           successCount++;
           progress.report({
             message: `${successCount}/${totalFiles} files updated`,
@@ -624,7 +629,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
       }, async (progress) => {
         for (const option of selected) {
           try {
-            await this.envService.downloadSecretToLocalFile(option.filePath, secretName, itemId);
+            await this.downloadSecretToLocalFile(option.filePath, secretName, itemId);
             successCount++;
             progress.report({
               message: `${successCount}/${selected.length} files updated`,
@@ -646,89 +651,121 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
     }
   }
 
-  // Command handlers
+  // Helper method to convert file-based data to legacy format for UI compatibility
+  private async convertFilesToLegacySecrets(remoteFiles: any[]): Promise<RemoteSecret[]> {
+    const secrets: RemoteSecret[] = [];
+
+    for (const file of remoteFiles) {
+      const variables = this.envService.parseEnvContent(file.content);
+      for (const variable of variables) {
+        secrets.push({
+          name: variable.key,
+          created_at: file.metadata.lastModified,
+          updated_at: file.metadata.lastModified,
+          itemId: file.itemId || '',
+          filePath: file.metadata.filePath,
+          value: variable.value
+        });
+      }
+    }
+
+    return secrets;
+  }
+
+  // Helper method to simulate downloading a secret to a local file in the new file-based approach
+  private async downloadSecretToLocalFile(filePath: string, secretName: string, itemId: string): Promise<void> {
+    // In the file-based approach, we need to:
+    // 1. Get the secret value from the remote file
+    // 2. Update the local file with that value
+    // 3. The file will be automatically synced via file watcher
+
+    try {
+      // Find the remote file that contains this secret
+      const remoteFiles = await this.envService.getRemoteEnvFiles();
+      let secretValue: string | null = null;
+
+      for (const remoteFile of remoteFiles) {
+        if (remoteFile.itemId === itemId ||
+            (remoteFile.itemId && this.remoteSecrets.find(s => s.itemId === itemId && s.filePath === remoteFile.metadata.filePath))) {
+          const variables = this.envService.parseEnvContent(remoteFile.content);
+          const variable = variables.find(v => v.key === secretName);
+          if (variable) {
+            secretValue = variable.value;
+            break;
+          }
+        }
+      }
+
+      if (secretValue === null) {
+        // Fallback: try to get from the legacy remoteSecrets array
+        const remoteSecret = this.remoteSecrets.find(s => s.name === secretName && s.itemId === itemId);
+        if (remoteSecret && remoteSecret.value) {
+          secretValue = remoteSecret.value;
+        } else {
+          throw new Error(`Could not find secret value for ${secretName}`);
+        }
+      }
+
+      // Update the local file with the secret value
+      await this.updateLocalEnvVariable(filePath, secretName, secretValue);
+    } catch (error) {
+      console.error(`Failed to download ${secretName} to ${filePath}:`, error);
+      throw error;
+    }
+  }
+
+  // Updated command handler using new file-based sync
   async syncAllEnvironmentVariables(): Promise<void> {
     const isConfigured = await this.envService.isConfigured();
     if (!isConfigured) {
-      vscode.window.showErrorMessage('1Password not configured. Please configure 1Password Connect to sync environment variables.');
-      return;
-    }
-
-    const envFiles = this.environmentFiles;
-    if (envFiles.length === 0) {
-      vscode.window.showInformationMessage('No .env files found in the workspace.');
+      vscode.window.showErrorMessage('1Password not configured. Please configure 1Password first.');
       return;
     }
 
     try {
       await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
-        title: 'Syncing all environment variables to 1Password...',
+        title: 'Syncing all .env files with 1Password...',
         cancellable: false
-      }, async (progress) => {
-        let syncedCount = 0;
-        let totalCount = 0;
-
-        // Count total variables
-        for (const filePath of envFiles) {
-          const vars = await this.parseEnvFile(filePath);
-          totalCount += vars.length;
-        }
-
-        // Sync all variables
-        for (const filePath of envFiles) {
-          const vars = await this.parseEnvFile(filePath);
-          for (const variable of vars) {
-            try {
-              await this.envService.syncSingleVariable(variable.key, variable.value, filePath);
-              syncedCount++;
-              progress.report({
-                message: `${syncedCount}/${totalCount} variables synced`,
-                increment: (1 / totalCount) * 100
-              });
-            } catch (error) {
-              console.error(`Failed to sync ${variable.key}:`, error);
-            }
-          }
-        }
+      }, async () => {
+        await this.envService.syncAllEnvFiles();
       });
 
-      vscode.window.showInformationMessage('✅ All environment variables synced to 1Password successfully!');
-
+      vscode.window.showInformationMessage('✅ All .env files synced with 1Password successfully!');
+      await this.refresh();
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to sync environment variables: ${error instanceof Error ? error.message : String(error)}`);
+      vscode.window.showErrorMessage(`Failed to sync .env files: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  async syncEnvironmentVariable(item: EnvironmentItem): Promise<void> {
+  async syncEnvironmentFile(item: EnvironmentItem): Promise<void> {
     const isConfigured = await this.envService.isConfigured();
     if (!isConfigured) {
       vscode.window.showErrorMessage('1Password not configured.');
       return;
     }
 
-    const key = (item as any).envKey;
-    const value = (item as any).envValue;
-    const filePath = (item as any).filePath;
-
-    if (!key || !value || !filePath) {
-      vscode.window.showErrorMessage('Invalid environment variable data.');
+    const filePath = item?.resourceUri?.fsPath;
+    if (!filePath) {
+      vscode.window.showErrorMessage('Invalid file data.');
       return;
     }
 
     try {
+      const fileName = path.basename(filePath);
       await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
-        title: `Syncing ${key} to 1Password...`,
+        title: `Syncing ${fileName} to 1Password...`,
         cancellable: false
       }, async () => {
-        await this.envService.syncSingleVariable(key, value, filePath);
+        await this.envService.syncSingleEnvFile(filePath);
       });
 
-      vscode.window.showInformationMessage(`✅ ${key} synced to 1Password successfully!`);
-
+      vscode.window.showInformationMessage(`✅ ${fileName} synced to 1Password successfully!`);
+      await this.refresh();
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to sync ${key}: ${error instanceof Error ? error.message : String(error)}`);
+      const fileName = filePath ? path.basename(filePath) : 'file';
+      vscode.window.showErrorMessage(`Failed to sync ${fileName}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -933,7 +970,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
 
     // If only one .env file exists, use it
     if (this.environmentFiles.length === 1) {
-      await this.envService.downloadSecretToLocalFile(this.environmentFiles[0], secretName, itemId);
+      await this.downloadSecretToLocalFile(this.environmentFiles[0], secretName, itemId);
       await this.refresh();
       return;
     }
@@ -950,7 +987,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
     });
 
     if (selected) {
-      await this.envService.downloadSecretToLocalFile(selected.filePath, secretName, itemId);
+      await this.downloadSecretToLocalFile(selected.filePath, secretName, itemId);
       await this.refresh();
     }
   }
@@ -1061,7 +1098,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
     }, async (progress) => {
       for (const filePath of this.environmentFiles) {
         try {
-          await this.envService.downloadSecretToLocalFile(filePath, secretName, itemId);
+          await this.downloadSecretToLocalFile(filePath, secretName, itemId);
           successCount++;
           progress.report({
             message: `${successCount}/${totalFiles} files updated`,
@@ -1132,7 +1169,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
         // Add missing secrets to file with real values
         for (const remoteSecret of fileSecrets.missing) {
           try {
-            await this.envService.downloadSecretToLocalFile(filePath, remoteSecret.name, remoteSecret.itemId);
+            await this.downloadSecretToLocalFile(filePath, remoteSecret.name, remoteSecret.itemId);
             completed++;
             progress.report({
               message: `${completed}/${totalActions} secrets synced`,
@@ -1143,17 +1180,17 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
           }
         }
 
-        // Upload local-only secrets to 1Password
-        for (const localVar of fileSecrets.localOnly) {
+        // Upload local-only secrets to 1Password by syncing the entire file
+        if (fileSecrets.localOnly.length > 0) {
           try {
-            await this.envService.syncSingleVariable(localVar.key, localVar.value, filePath);
-            completed++;
+            await this.envService.syncSingleEnvFile(filePath);
+            completed += fileSecrets.localOnly.length;
             progress.report({
               message: `${completed}/${totalActions} secrets synced`,
-              increment: (1 / totalActions) * 100
+              increment: (fileSecrets.localOnly.length / totalActions) * 100
             });
           } catch (error) {
-            console.error(`Failed to upload ${localVar.key}:`, error);
+            console.error(`Failed to sync file with local-only variables:`, error);
           }
         }
       });
@@ -1177,7 +1214,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
     }
 
     try {
-      await this.envService.downloadSecretToLocalFile(filePath, secretName, itemId);
+      await this.downloadSecretToLocalFile(filePath, secretName, itemId);
       await this.refresh();
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to add ${secretName}: ${error instanceof Error ? error.message : String(error)}`);
@@ -1202,10 +1239,10 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
         title: `Uploading ${secretName} to 1Password...`,
         cancellable: false
       }, async () => {
-        await this.envService.syncSingleVariable(secretName, secretValue, filePath);
+        await this.envService.syncSingleEnvFile(filePath);
       });
 
-      vscode.window.showInformationMessage(`✅ ${secretName} uploaded to 1Password`);
+      vscode.window.showInformationMessage(`✅ ${secretName} uploaded to 1Password (file synced)`);
       await this.refresh();
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to upload ${secretName}: ${error instanceof Error ? error.message : String(error)}`);
@@ -1248,7 +1285,9 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
           title: `Updating 1Password with local value for ${secretName}...`,
           cancellable: false
         }, async () => {
-          await this.envService.updateSecretValue(itemId, localValue);
+          // Update the local file first, then sync the entire file
+          await this.updateLocalEnvVariable(filePath, secretName, localValue);
+          await this.envService.syncSingleEnvFile(filePath);
         });
         vscode.window.showInformationMessage(`✅ Updated 1Password with local value for ${secretName}`);
       } else if (choice === 'Use 1Password Value (Update Local)') {
@@ -1259,7 +1298,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
             title: `Updating ${fileName} with 1Password value for ${secretName}...`,
             cancellable: false
           }, async () => {
-            await this.envService.updateLocalEnvVariable(filePath, secretName, remoteValue);
+            await this.updateLocalEnvVariable(filePath, secretName, remoteValue || '');
           });
           vscode.window.showInformationMessage(`✅ Updated ${fileName} with 1Password value for ${secretName}`);
         } else {
@@ -1301,6 +1340,54 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
       await this.refresh();
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to remove ${secretName}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async updateLocalEnvVariable(filePath: string, key: string, newValue: string): Promise<void> {
+    try {
+      const document = await vscode.workspace.openTextDocument(filePath);
+      const content = document.getText();
+      const lines = content.split('\n');
+
+      let updated = false;
+      const updatedLines = lines.map(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('#') || !trimmed.includes('=')) {
+          return line; // Keep comments and non-variable lines unchanged
+        }
+        const equalIndex = trimmed.indexOf('=');
+        if (equalIndex > 0) {
+          const lineKey = trimmed.substring(0, equalIndex).trim();
+          if (lineKey === key) {
+            updated = true;
+            // Preserve original line formatting but update the value
+            const indent = line.match(/^(\s*)/)?.[1] || '';
+            return `${indent}${key}=${newValue}`;
+          }
+        }
+        return line;
+      });
+
+      // If variable wasn't found, add it at the end
+      if (!updated) {
+        updatedLines.push(`${key}=${newValue}`);
+      }
+
+      const newContent = updatedLines.join('\n');
+
+      // Write back to file
+      const workspaceEdit = new vscode.WorkspaceEdit();
+      const fullRange = new vscode.Range(
+        document.positionAt(0),
+        document.positionAt(content.length)
+      );
+      workspaceEdit.replace(document.uri, fullRange, newContent);
+
+      await vscode.workspace.applyEdit(workspaceEdit);
+      await document.save();
+    } catch (error) {
+      console.error('Error updating variable in file:', error);
+      throw error;
     }
   }
 

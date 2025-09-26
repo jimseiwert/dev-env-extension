@@ -2,12 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createClient, Client, Item, ItemCreateParams, ItemCategory, ItemFieldType } from '@1password/sdk';
-
-export interface EnvFile {
-  filePath: string;
-  lastModified: Date;
-  content: string;
-}
+import { EnvFile } from '../../types';
 
 export class EnvFileManager {
   private client: Client | null = null;

@@ -1,18 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { createClient, Client, Item, ItemCreateParams, ItemCategory, ItemFieldType, ItemState, ItemListFilter } from '@1password/sdk';
-
-export interface OnePasswordConfig {
-  enabled: boolean;
-  vaultId: string;
-  secretPrefix: string;
-}
-
-export interface EnvSecretMetadata {
-  secretName: string;
-  filePath: string;
-  itemId?: string;
-}
+import { OnePasswordConfig, EnvSecretMetadata } from '../../types';
 
 export class OnePasswordService {
   private config: OnePasswordConfig;
@@ -20,22 +9,16 @@ export class OnePasswordService {
   private secretMetadata: Map<string, EnvSecretMetadata> = new Map();
   private secretStorage: vscode.SecretStorage;
 
-  // Rate limiting and caching
+  // Simple rate limiting and caching
   private lastApiCall: number = 0;
-  private minApiInterval: number = 500; // Increased to 500ms between API calls
+  private minApiInterval: number = 100; // Reasonable 100ms between API calls
   private secretsCache: { data: any[], timestamp: number } | null = null;
-  private secretsCacheTTL: number = 60000; // Increased to 60 second cache
+  private secretsCacheTTL: number = 30000; // 30 second cache
   private vaultCache: { vaultId: string, timestamp: number } | null = null;
 
-  // Prevent concurrent API calls
+  // Prevent concurrent API calls for secrets loading
   private isLoadingSecrets: boolean = false;
   private pendingSecretsPromise: Promise<any[]> | null = null;
-
-  // Circuit breaker for rate limiting
-  private circuitBreakerOpen: boolean = false;
-  private circuitBreakerOpenUntil: number = 0;
-  private lastRateLimitError: Date | null = null;
-  private rateLimitRetryAfter: number = 0; // seconds to wait
 
   constructor(secretStorage: vscode.SecretStorage) {
     this.secretStorage = secretStorage;
@@ -44,94 +27,35 @@ export class OnePasswordService {
 
   private async rateLimitedApiCall<T>(apiCall: () => Promise<T>, callDescription?: string): Promise<T> {
     const now = Date.now();
-    const caller = callDescription || new Error().stack?.split('\n')[2]?.trim() || 'Unknown';
-
-    // Check circuit breaker
-    if (this.circuitBreakerOpen && now < this.circuitBreakerOpenUntil) {
-      const waitTime = this.circuitBreakerOpenUntil - now;
-      console.error(`🚫 Circuit breaker OPEN - refusing API call for ${waitTime}ms: ${caller}`);
-      throw new Error(`Circuit breaker open - 1Password API calls temporarily disabled`);
-    }
-
-    // Reset circuit breaker if time has passed
-    if (this.circuitBreakerOpen && now >= this.circuitBreakerOpenUntil) {
-      console.log(`🔓 Circuit breaker RESET - allowing API calls again`);
-      this.circuitBreakerOpen = false;
-    }
-
     const timeSinceLastCall = now - this.lastApiCall;
-    console.log(`🔄 API Call Request: ${caller} | Time since last: ${timeSinceLastCall}ms`);
 
-    // More aggressive rate limiting - wait at least 3 seconds between calls
-    const aggressiveMinInterval = 3000;
-
-    if (timeSinceLastCall < aggressiveMinInterval) {
-      const waitTime = aggressiveMinInterval - timeSinceLastCall;
-      console.log(`⏳ AGGRESSIVE Rate limiting: waiting ${waitTime}ms before API call (${caller})`);
+    // Simple rate limiting - wait minimum interval if needed
+    if (timeSinceLastCall < this.minApiInterval) {
+      const waitTime = this.minApiInterval - timeSinceLastCall;
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
 
     this.lastApiCall = Date.now();
-    console.log(`➡️ Making API call: ${caller} at ${new Date().toISOString()}`);
 
     try {
-      const result = await apiCall();
-      console.log(`✅ API call successful: ${caller}`);
-      return result;
+      return await apiCall();
     } catch (error) {
-      console.error(`❌ API call failed: ${caller} - ${error}`);
-
-      // If it's a rate limit error, handle it gracefully
+      // If it's a rate limit error, wait a bit longer and try once more
       if (error && typeof error === 'object' && 'message' in error &&
-          (error.message as string).includes('rate limit')) {
+          (error.message as string).toLowerCase().includes('rate limit')) {
 
-        this.lastRateLimitError = new Date();
+        console.warn('⏳ 1Password rate limit reached, waiting 5 seconds before retry...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
-        // Try to extract retry-after information from error (if available)
-        // Default to 60 seconds if not specified
-        this.rateLimitRetryAfter = 60;
-
-        console.warn(`⏳ 1Password rate limit reached. Will retry after ${this.rateLimitRetryAfter} seconds.`);
-
-        // Open circuit breaker with dynamic timeout
-        this.circuitBreakerOpen = true;
-        this.circuitBreakerOpenUntil = Date.now() + (this.rateLimitRetryAfter * 1000);
-        this.lastApiCall = Date.now() + (this.rateLimitRetryAfter * 1000);
-
-        // Show gentle, non-intrusive notification
-        this.showRateLimitStatus();
+        // Single retry attempt
+        this.lastApiCall = Date.now();
+        return await apiCall();
       }
 
       throw error;
     }
   }
 
-  private showRateLimitStatus(): void {
-    const retryTime = new Date(Date.now() + (this.rateLimitRetryAfter * 1000));
-    const timeString = retryTime.toLocaleTimeString();
-
-    // Show gentle notification in status bar instead of intrusive popup
-    vscode.window.setStatusBarMessage(
-      `⏳ 1Password rate limited - retrying at ${timeString}`,
-      this.rateLimitRetryAfter * 1000
-    );
-
-    // Also show in output channel for debugging
-    const outputChannel = vscode.window.createOutputChannel('DevOrb 1Password');
-    outputChannel.appendLine(`[${new Date().toISOString()}] Rate limit reached. Next retry scheduled for ${timeString}`);
-    outputChannel.appendLine('This is normal - 1Password has conservative rate limits to protect their service.');
-    outputChannel.appendLine('DevOrb will automatically retry your request when the limit resets.');
-  }
-
-  public getRateLimitStatus(): { isRateLimited: boolean; retryAfter?: Date } {
-    if (this.circuitBreakerOpen && Date.now() < this.circuitBreakerOpenUntil) {
-      return {
-        isRateLimited: true,
-        retryAfter: new Date(this.circuitBreakerOpenUntil)
-      };
-    }
-    return { isRateLimited: false };
-  }
 
   private loadConfig(): OnePasswordConfig {
     const config = vscode.workspace.getConfiguration('devOrb.env');
@@ -175,12 +99,15 @@ export class OnePasswordService {
   }
 
   public async initialize(): Promise<void> {
+    // Refresh config in case settings have changed
+    this.config = this.loadConfig();
+
     if (!this.config.enabled) {
       return;
     }
 
-    // Initialize client if configured
-    if (await this.isConfigured()) {
+    // Initialize client if we have a token (vault can be selected later)
+    if (await this.hasServiceAccountToken()) {
       try {
         const token = await this.getServiceAccountToken();
         if (token) {
@@ -189,11 +116,14 @@ export class OnePasswordService {
             integrationName: 'DevOrb VS Code Extension',
             integrationVersion: '1.0.0'
           });
+          console.log('✅ 1Password client initialized');
         }
       } catch (error) {
-        console.error('1Password SDK initialization failed:', error);
+        console.error('❌ 1Password SDK initialization failed:', error);
         this.client = null;
       }
+    } else {
+      this.client = null;
     }
   }
 
@@ -266,19 +196,30 @@ export class OnePasswordService {
   }
 
   public async getVaults(): Promise<Array<{id: string, name: string}>> {
+    // Try to initialize client if not already initialized
     if (!this.client) {
-      throw new Error('1Password not configured or client not initialized');
+      await this.initialize();
+
+      if (!this.client) {
+        const hasToken = await this.hasServiceAccountToken();
+        if (!hasToken) {
+          throw new Error('1Password Service Account Token not configured');
+        } else {
+          throw new Error('Failed to initialize 1Password client');
+        }
+      }
     }
 
     try {
       const vaults = await this.rateLimitedApiCall(() => this.client!.vaults.list(), 'getVaults - vaults.list');
+
       return vaults.map(vault => ({
         id: vault.id,
         name: vault.title
       }));
     } catch (error) {
-      console.error('Error fetching vaults:', error);
-      throw new Error('Failed to fetch vaults');
+      console.error('❌ Error fetching vaults:', error);
+      throw new Error(`Failed to fetch vaults: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -733,6 +674,217 @@ export class OnePasswordService {
 
   public getSignupUrl(): string {
     return 'https://start.1password.com/sign-up';
+  }
+
+  // File-based sync methods
+  public async createEnvFile(fileName: string, content: string, metadata: import('../../types').EnvFileMetadata): Promise<string> {
+    if (!this.client) {
+      throw new Error('1Password client not initialized');
+    }
+
+    try {
+      const vaultId = await this.ensureDevOrbVault();
+
+      const itemParams: ItemCreateParams = {
+        vaultId,
+        category: ItemCategory.Document,
+        title: `DevOrb Env: ${metadata.repoName}/${fileName}`,
+        fields: [
+          {
+            id: 'repository',
+            fieldType: ItemFieldType.Text,
+            title: 'Repository',
+            value: metadata.repoName
+          },
+          {
+            id: 'file_path',
+            fieldType: ItemFieldType.Text,
+            title: 'File Path',
+            value: metadata.filePath
+          },
+          {
+            id: 'last_modified',
+            fieldType: ItemFieldType.Text,
+            title: 'Last Modified',
+            value: metadata.lastModified
+          },
+          {
+            id: 'hash',
+            fieldType: ItemFieldType.Text,
+            title: 'Hash',
+            value: metadata.hash
+          },
+          {
+            id: 'file_content',
+            fieldType: ItemFieldType.Concealed,
+            title: 'File Content',
+            value: content
+          }
+        ],
+        tags: [`devorb`, `repo:${metadata.repoName}`, `env-file`, `source:${metadata.source}`]
+      };
+
+      const item = await this.rateLimitedApiCall(() => this.client!.items.create(itemParams), `createEnvFile - ${fileName}`);
+      console.log(`✅ Created env file in 1Password: ${fileName}`);
+
+      // Invalidate cache
+      this.invalidateSecretsCache();
+
+      return item.id;
+    } catch (error) {
+      console.error('Error creating env file in 1Password:', error);
+      throw new Error('Failed to create env file');
+    }
+  }
+
+  public async updateEnvFile(itemId: string, content: string, metadata: import('../../types').EnvFileMetadata): Promise<void> {
+    if (!this.client) {
+      throw new Error('1Password client not initialized');
+    }
+
+    try {
+      const vaultId = await this.ensureDevOrbVault();
+
+      // Get the current item
+      const currentItem = await this.rateLimitedApiCall(() => this.client!.items.get(vaultId, itemId));
+
+      // Update the fields
+      const updatedFields = currentItem.fields.map(field => {
+        if (field.title === 'File Content') {
+          return { ...field, value: content };
+        }
+        if (field.title === 'Last Modified') {
+          return { ...field, value: metadata.lastModified };
+        }
+        if (field.title === 'Hash') {
+          return { ...field, value: metadata.hash };
+        }
+        return field;
+      });
+
+      const updatedItem = {
+        ...currentItem,
+        fields: updatedFields,
+        tags: [...(currentItem.tags || []).filter(tag => !tag.startsWith('source:')), `source:${metadata.source}`]
+      };
+
+      await this.rateLimitedApiCall(() => this.client!.items.put(updatedItem));
+      console.log(`✅ Updated env file in 1Password: ${metadata.filePath}`);
+
+      // Invalidate cache
+      this.invalidateSecretsCache();
+    } catch (error) {
+      console.error('Error updating env file:', error);
+      throw new Error('Failed to update env file');
+    }
+  }
+
+  public async findEnvFileByPath(repoName: string, filePath: string): Promise<{ id: string; title: string } | null> {
+    if (!this.client) {
+      throw new Error('1Password client not initialized');
+    }
+
+    try {
+      const vaultId = await this.ensureDevOrbVault();
+      const items = await this.rateLimitedApiCall(() => this.client!.items.list(vaultId), `findEnvFileByPath - ${filePath}`);
+
+      const envFileItems = items.filter(item =>
+        item.tags.includes('env-file') &&
+        item.tags.includes(`repo:${repoName}`) &&
+        item.category === ItemCategory.Document
+      );
+
+      for (const item of envFileItems) {
+        // Get full item details to check the file path field
+        const fullItem = await this.rateLimitedApiCall(() => this.client!.items.get(vaultId, item.id));
+        const filePathField = fullItem.fields.find(field => field.title === 'File Path');
+
+        if (filePathField?.value === filePath) {
+          return {
+            id: item.id,
+            title: item.title
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error finding env file by path:', error);
+      return null;
+    }
+  }
+
+  public async getEnvFilesForRepo(repoName: string): Promise<import('../../types').SyncedEnvFile[]> {
+    if (!this.client) {
+      throw new Error('1Password client not initialized');
+    }
+
+    try {
+      const vaultId = await this.ensureDevOrbVault();
+      const items = await this.rateLimitedApiCall(() => this.client!.items.list(vaultId), `getEnvFilesForRepo - ${repoName}`);
+
+      const envFileItems = items.filter(item =>
+        item.tags.includes('env-file') &&
+        item.tags.includes(`repo:${repoName}`) &&
+        item.category === ItemCategory.Document
+      );
+
+      const syncedFiles: import('../../types').SyncedEnvFile[] = [];
+
+      for (const item of envFileItems) {
+        try {
+          // Get full item details
+          const fullItem = await this.rateLimitedApiCall(() => this.client!.items.get(vaultId, item.id));
+
+          const getFieldValue = (title: string) =>
+            fullItem.fields.find(field => field.title === title)?.value || '';
+
+          const content = getFieldValue('File Content');
+          const filePath = getFieldValue('File Path');
+          const lastModified = getFieldValue('Last Modified');
+          const hash = getFieldValue('Hash');
+
+          if (content && filePath) {
+            syncedFiles.push({
+              content,
+              metadata: {
+                repoName,
+                filePath,
+                lastModified: lastModified || new Date().toISOString(),
+                hash: hash || '',
+                source: 'remote'
+              },
+              itemId: item.id
+            });
+          }
+        } catch (error) {
+          console.warn(`Could not load env file item ${item.id}:`, error);
+        }
+      }
+
+      return syncedFiles;
+    } catch (error) {
+      console.error('Error getting env files for repo:', error);
+      return [];
+    }
+  }
+
+  public async deleteEnvFile(itemId: string): Promise<void> {
+    if (!this.client) {
+      throw new Error('1Password client not initialized');
+    }
+
+    try {
+      const vaultId = await this.ensureDevOrbVault();
+      await this.rateLimitedApiCall(() => this.client!.items.delete(vaultId, itemId));
+      console.log(`✅ Deleted env file from 1Password: ${itemId}`);
+
+      // Invalidate cache
+      this.invalidateSecretsCache();
+    } catch (error) {
+      console.error('Error deleting env file:', error);
+      throw new Error('Failed to delete env file');
+    }
   }
 
   public dispose(): void {

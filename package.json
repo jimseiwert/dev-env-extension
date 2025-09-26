@@ -1,7 +1,7 @@
 {
   "name": "devorb",
   "displayName": "DevOrb",
-  "description": "Your dev environment remembers across machines - sync Claude Code, GitHub Copilot, and environment configs",
+  "description": "Your dev environment remembers across machines",
   "version": "1.0.0",
   "publisher": "jimseiwert",
   "author": {
@@ -39,21 +39,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "devOrb.syncNow",
-        "title": "DevOrb: Sync Now",
-        "icon": "$(sync)"
-      },
-      {
-        "command": "devOrb.showStatus",
-        "title": "DevOrb: Show Status",
-        "icon": "$(info)"
-      },
-      {
-        "command": "devOrb.openSettings",
-        "title": "DevOrb: Open Settings",
-        "icon": "$(gear)"
-      },
-      {
         "command": "devOrb.refreshEnvironment",
         "title": "Refresh Environment Variables",
         "icon": "$(refresh)"
@@ -67,46 +52,6 @@
         "command": "devOrb.syncEnvironmentVariable",
         "title": "Sync Variable",
         "icon": "$(cloud-upload)"
-      },
-      {
-        "command": "devOrb.addRemoteSecretToLocal",
-        "title": "Add to Local .env",
-        "icon": "$(cloud-download)"
-      },
-      {
-        "command": "devOrb.downloadSecretToEnv",
-        "title": "Download to .env",
-        "icon": "$(cloud-download)"
-      },
-      {
-        "command": "devOrb.downloadSecretToAllEnv",
-        "title": "Download to All .env Files",
-        "icon": "$(cloud-download)"
-      },
-      {
-        "command": "devOrb.addMissingSecretToFile",
-        "title": "Add to File",
-        "icon": "$(add)"
-      },
-      {
-        "command": "devOrb.uploadSecretToGitHub",
-        "title": "Upload to GitHub",
-        "icon": "$(cloud-upload)"
-      },
-      {
-        "command": "devOrb.removeSecretFromFile",
-        "title": "Remove from File",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "devOrb.syncAllSecretsForFile",
-        "title": "Sync All Secrets",
-        "icon": "$(sync)"
-      },
-      {
-        "command": "devOrb.resolveSecretConflict",
-        "title": "Resolve Conflict",
-        "icon": "$(git-merge)"
       },
       {
         "command": "devOrb.signUp1Password",
@@ -134,213 +79,65 @@
         "icon": "$(database)"
       },
       {
-        "command": "devOrb.testAutoSync",
-        "title": "DevOrb: Test Auto-Sync (Debug)",
-        "icon": "$(debug)"
+        "command": "devOrb.syncEnvironmentFile",
+        "title": "Sync Environment File",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "devOrb.createMissingEnvFiles",
+        "title": "Create Missing Environment Files",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "devOrb.openSettings",
+        "title": "DevOrb: Open Settings",
+        "icon": "$(gear)"
       }
     ],
     "configuration": [
       {
-        "title": "General",
+        "title": "DevOrb",
+        "order": 1,
         "properties": {
           "devOrb.enabled": {
             "type": "boolean",
             "default": true,
-            "description": "Enable DevOrb"
+            "description": "Enable DevOrb",
+            "order": 1
           },
           "devOrb.autoSync": {
             "type": "boolean",
             "default": true,
-            "description": "Automatically sync when files change",
-            "enablement": "config.devOrb.enabled"
+            "markdownDescription": "Automatically sync when files change. Only applies if `#devOrb.enabled#` is enabled.",
+            "enablement": "devOrb.enabled",
+            "order": 2
+          },
+          "devOrb.secretProvider": {
+            "type": "string",
+            "order": 3,
+            "enum": [
+              "1password"
+            ],
+            "markdownEnumDescriptions": [
+              "Store environment files in *1Password*"
+            ],
+            "enumItemLabels": [
+              "1Password"
+            ],
+            "default": "1password",
+            "description": "What provider to use for storing environment files"
           }
         }
       },
       {
-        "title": "Claude Code",
-        "properties": {
-          "devOrb.claude.enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Enable Claude configuration sync across machines",
-            "enablement": "config.devOrb.enabled"
-          },
-          "devOrb.claude.gists.settings": {
-            "type": "string",
-            "description": "GitHub Gist ID for Claude settings sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.gists.agents": {
-            "type": "string",
-            "description": "GitHub Gist ID for Claude subagents and hooks sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.gists.commands": {
-            "type": "string",
-            "description": "GitHub Gist ID for Claude slash commands sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.gists.plugins": {
-            "type": "string",
-            "description": "GitHub Gist ID for Claude plugins sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.gists.projects": {
-            "type": "string",
-            "description": "GitHub Gist ID for CLAUDE.md project files sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.syncInterval": {
-            "type": "number",
-            "default": 30,
-            "description": "Sync interval in minutes",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.syncItems.settings": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync Claude settings.json",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.syncItems.subagents": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync Claude subagents.json",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.syncItems.hooks": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync Claude hooks.json",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.syncItems.slashCommands": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync custom slash commands",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.syncItems.plugins": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync plugin configurations",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          },
-          "devOrb.claude.syncItems.claudeMd": {
-            "type": "boolean",
-            "default": false,
-            "description": "Sync CLAUDE.md project files",
-            "enablement": "config.devOrb.enabled && config.devOrb.claude.enabled"
-          }
-        }
-      },
-      {
-        "title": "GitHub Copilot",
-        "properties": {
-          "devOrb.copilot.enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Enable GitHub Copilot configuration sync across machines",
-            "enablement": "config.devOrb.enabled"
-          },
-          "devOrb.copilot.gists.instructions": {
-            "type": "string",
-            "description": "GitHub Gist ID for Copilot instructions sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.gists.prompts": {
-            "type": "string",
-            "description": "GitHub Gist ID for Copilot prompt files sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.gists.settings": {
-            "type": "string",
-            "description": "GitHub Gist ID for Copilot extension settings sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.gists.history": {
-            "type": "string",
-            "description": "GitHub Gist ID for Copilot chat history sync (auto-generated)",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.autoSync": {
-            "type": "boolean",
-            "default": true,
-            "description": "Automatically sync Copilot settings when they change",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.syncInterval": {
-            "type": "number",
-            "default": 30,
-            "description": "Copilot sync interval in minutes",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.syncItems.personalInstructions": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync personal custom instructions for Copilot Chat",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.syncItems.orgInstructions": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync organization custom instructions for Copilot Chat",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.syncItems.promptFiles": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync .copilot-instructions.md and other prompt files",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.syncItems.chatHistory": {
-            "type": "boolean",
-            "default": false,
-            "description": "Sync Copilot Chat conversation history",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.syncItems.extensionSettings": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync Copilot extension preferences and settings",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          },
-          "devOrb.copilot.syncItems.shortcuts": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sync Copilot keyboard shortcuts and commands",
-            "enablement": "config.devOrb.enabled && config.devOrb.copilot.enabled"
-          }
-        }
-      },
-      {
-        "title": "Environment Variables",
+        "title": "Environment Files",
+        "order": 2,
         "properties": {
           "devOrb.env.enabled": {
             "type": "boolean",
             "default": true,
             "description": "Enable environment variable syncing via 1Password",
             "enablement": "config.devOrb.enabled"
-          },
-          "devOrb.env.onePassword.serviceAccountToken": {
-            "type": "string",
-            "markdownDescription": "🔐 **1Password Service Account Token** (starts with `ops_`)\n\n📝 **How to use:** Paste your token here and save settings. It will be automatically moved to secure storage and this field will be cleared.\n\n🔗 **Get a token:** Create a Service Account at [1Password Developer Console](https://developer.1password.com/docs/service-accounts/)",
-            "default": "",
-            "pattern": "^(ops_.*|)$",
-            "patternErrorMessage": "Service Account Token must start with 'ops_' or be empty",
-            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
-          },
-          "devOrb.env.onePassword.tokenStatus": {
-            "type": "string",
-            "markdownDescription": "**Token Status** - Shows whether a Service Account Token is currently stored securely",
-            "default": "❌ No token configured",
-            "readOnly": true,
-            "enablement": "false"
-          },
-          "devOrb.env.onePassword.vaultId": {
-            "type": "string",
-            "markdownDescription": "**1Password Vault ID** for environment variables  \n\n💡 **Tip:** Use the command `DevOrb: Select 1Password Vault` to browse and choose from your available vaults",
-            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
           },
           "devOrb.env.secretPrefix": {
             "type": "string",
@@ -360,6 +157,32 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "**Automatically create missing .env files** from 1Password secrets when the extension starts.",
+            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
+          }
+        }
+      },
+      {
+        "title": "1Password",
+        "order": 3,
+        "properties": {
+          "devOrb.env.onePassword.serviceAccountToken": {
+            "type": "string",
+            "markdownDescription": "🔐 **1Password Service Account Token** (starts with `ops_`)\n\n📝 **How to use:** Paste your token here and save settings. It will be automatically moved to secure storage and this field will be cleared.\n\n🔗 **Get a token:** Create a Service Account at [1Password Developer Console](https://developer.1password.com/docs/service-accounts/)",
+            "default": "",
+            "pattern": "^(ops_.*|)$",
+            "patternErrorMessage": "Service Account Token must start with 'ops_' or be empty",
+            "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
+          },
+          "devOrb.env.onePassword.tokenStatus": {
+            "type": "string",
+            "markdownDescription": "**Token Status** - Shows whether a Service Account Token is currently stored securely",
+            "default": "❌ No token configured",
+            "readOnly": true,
+            "enablement": "false"
+          },
+          "devOrb.env.onePassword.vaultId": {
+            "type": "string",
+            "markdownDescription": "**1Password Vault ID** for environment variables  \n\n💡 **Tip:** Use the command `DevOrb: Select 1Password Vault` to browse and choose from your available vaults",
             "enablement": "config.devOrb.enabled && config.devOrb.env.enabled"
           }
         }
@@ -385,15 +208,6 @@
     },
     "menus": {
       "commandPalette": [
-        {
-          "command": "devOrb.syncNow"
-        },
-        {
-          "command": "devOrb.showStatus"
-        },
-        {
-          "command": "devOrb.openSettings"
-        }
       ],
       "view/title": [
         {
@@ -407,51 +221,16 @@
           "group": "navigation"
         },
         {
-          "command": "devOrb.syncAllSecretsForFile",
+          "command": "devOrb.syncEnvironmentFile",
           "when": "view == devOrb.environmentView && viewItem == envFile",
           "group": "inline"
         }
       ],
       "view/item/context": [
         {
-          "command": "devOrb.syncEnvironmentVariable",
-          "when": "view == devOrb.environmentView && viewItem == envVariable",
+          "command": "devOrb.syncEnvironmentFile",
+          "when": "view == devOrb.environmentView && viewItem == envFile",
           "group": "inline"
-        },
-        {
-          "command": "devOrb.addRemoteSecretToLocal",
-          "when": "view == devOrb.environmentView && viewItem == remoteSecret",
-          "group": "inline"
-        },
-        {
-          "command": "devOrb.downloadSecretToEnv",
-          "when": "view == devOrb.environmentView && viewItem == onePasswordSecret",
-          "group": "inline@1"
-        },
-        {
-          "command": "devOrb.downloadSecretToAllEnv",
-          "when": "view == devOrb.environmentView && viewItem == onePasswordSecret",
-          "group": "inline@2"
-        },
-        {
-          "command": "devOrb.addMissingSecretToFile",
-          "when": "view == devOrb.environmentView && viewItem == missingSecret",
-          "group": "inline"
-        },
-        {
-          "command": "devOrb.uploadSecretToGitHub",
-          "when": "view == devOrb.environmentView && viewItem == localOnlySecret",
-          "group": "inline@1"
-        },
-        {
-          "command": "devOrb.removeSecretFromFile",
-          "when": "view == devOrb.environmentView && (viewItem == syncedSecret || viewItem == localOnlySecret || viewItem == conflictedSecret)",
-          "group": "inline@2"
-        },
-        {
-          "command": "devOrb.resolveSecretConflict",
-          "when": "view == devOrb.environmentView && viewItem == conflictedSecret",
-          "group": "inline@1"
         }
       ]
     }
