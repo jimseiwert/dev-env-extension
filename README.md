@@ -1,201 +1,134 @@
-# DevOrb
+# 🌍 DevOrb
 
-Your dev environment remembers across machines. DevOrb syncs Claude AI, GitHub Copilot, and environment configurations seamlessly between your development setups.
+> **Your dev environment finally has a memory!** 🧠
 
-## Features
+Tired of setting up `.env` files on every new machine? Fed up with copying environment variables between your laptop, desktop, and that server you SSH into? DevOrb is here to save your sanity (and your secrets)!
 
-### AI Assistant Sync
+This VS Code extension seamlessly syncs your environment variables across all your development machines using 1Password's rock-solid security. Because who has time to remember 47 different API keys? 🔐
 
-Sync your Claude AI and GitHub Copilot configurations across multiple development machines using GitHub Gists. This includes:
+<!-- ## 📸 See It In Action
 
-- **Settings** - Claude global settings (`settings.json`)
-- **Subagents** - Custom subagent definitions (`subagents.json`)
-- **Hooks** - Hook configurations (`hooks.json`)
-- **Slash Commands** - Custom slash command scripts
-- **Plugins** - Plugin configurations
-- **Project Memory** - CLAUDE.md files (optional)
+> 🚧 **Screenshots coming soon!** We're putting the finishing touches on some beautiful screenshots to show you exactly how DevOrb works. Check back soon or see the `screenshots/` folder for our photography roadmap! 📷 -->
 
-#### Setup
+## ✨ Features
 
-1. **Enable DevOrb**
-   - Open VS Code Settings (`Ctrl/Cmd + ,`)
-   - Search for "DevOrb"
-   - Check "Enable Claude configuration sync across machines"
+### 🔒 Secure Environment Variable Sync
+- **Zero-Config Magic**: Automatically detects `.env`, `.env.local`, `.env.development`, and friends
+- **1Password Integration**: Your secrets stay secure in your 1Password vault (because we're not monsters)
+- **Smart Auto-Sync**: Updates everywhere when you change a variable anywhere
+- **Multiple Projects**: Each project can have its own vault or share one - your choice!
 
-2. **Authenticate with GitHub**
-   - VS Code will automatically prompt you to sign in to GitHub when needed
-   - Grant permission for `gist` access when prompted
+### 🚀 What Gets Synced
+- All your `.env` files and variants (`.env.local`, `.env.development`, etc.)
+- Environment variables across unlimited development machines
+- Project-specific configurations with optional prefixes
+- Automatic file creation when you clone repositories
 
-3. **Choose Sync Items**
-   - Select which Claude configurations to sync
-   - By default, all core settings are enabled
+## 🎯 Getting Started
 
-#### Usage
+### Step 1: Get a 1Password Account
+You'll need a 1Password account to store your environment variables securely. Don't have one?
 
-- **Manual Sync**: Command Palette → "DevOrb: Sync Now"
-- **Auto Sync**: Automatically syncs when files change (configurable)
-- **Status Check**: Command Palette → "DevOrb: Show Status"
+👉 **[Sign up for 1Password](https://1password.com/sign-up/)**
 
-#### Security
+*Pro tip: You can use the personal plan or get your company to pay for it! 💸*
 
-- Uses private GitHub Gists for storage
-- Excludes sensitive/machine-specific files:
-  - Session data (`statsig/`)
-  - Conversation history (`.jsonl` files)
-  - IDE locks and temporary files
-  - Shell snapshots
+### Step 2: Create Your DevOrb Vault
+1. Log into your 1Password account
+2. Create a new vault called **"DevOrb"** (exactly like that, case-sensitive!)
+3. This is where all your environment variables will live
 
-## Commands
+### Step 3: Get Your Service Account Token
+1. Head over to the [1Password Developer Console](https://developer.1password.com/docs/service-accounts/)
+2. Create a new Service Account
+3. Give it access to your DevOrb vault
+4. Copy that shiny new token (it starts with `ops_`)
 
-- `DevOrb: Sync Now` - Manually trigger sync
-- `DevOrb: Show Status` - View sync status
-- `DevOrb: Open Settings` - Open sync settings
+### Step 4: Configure DevOrb
+1. Install this extension (you probably already did this!)
+2. Open VS Code Settings (`Ctrl/Cmd + ,`)
+3. Search for "DevOrb"
+4. Paste your service account token in the 1Password settings
+5. Use the `DevOrb: Select 1Password Vault` command to choose your DevOrb vault
 
-## Requirements
+### Step 5: Profit! 📈
+That's it! DevOrb will now:
+- Scan your workspace for `.env` files
+- Show you which variables are synced vs local-only
+- Automatically sync changes across all your machines
+- Create missing `.env` files when you switch between projects
 
-- GitHub account for Gist storage
-- Claude AI and/or GitHub Copilot (depending on what you want to sync)
+## 🎮 Commands
 
-## Release Notes
+| Command | What It Does | When To Use It |
+|---------|--------------|----------------|
+| `DevOrb: Setup 1Password Integration` | Walks you through the setup process | First time setup or if things break |
+| `DevOrb: Set 1Password Service Account Token` | Add or update your token | When you get a new token |
+| `DevOrb: Select 1Password Vault` | Choose which vault to use | Setting up or switching vaults |
+| `DevOrb: Refresh & Sync Environment Files` | Force a full sync | When you want to make sure everything's up to date |
+| `DevOrb: Sync All Environment Variables` | Push all local vars to 1Password | After making lots of changes |
+| `DevOrb: Create Missing Environment Files` | Pull down missing .env files | When you clone a new project |
+| `DevOrb: Open Settings` | Jump to DevOrb settings | When you need to tweak things |
 
-### 0.0.1
+### Keyboard Shortcuts
+- `Ctrl+Alt+R` (or `Cmd+Alt+R` on Mac): Quick refresh and sync
 
-- Initial release
-- Claude AI configuration sync via GitHub Gists
-- GitHub Copilot configuration sync support
-- Environment file detection and management
-- Configurable sync options with auto-sync
-- Cross-machine development environment consistency
+### Context Menu Magic
+Right-click on any `.env` file in the Explorer to:
+- Sync that specific file to 1Password
+- Download the latest version from 1Password
+- Check sync status
 
- ```mermaid
-sequenceDiagram
-      participant User as User
-      participant Ext as VS Code Extension
-      participant EnvView as Environment View Provider
-      participant EnvSvc as Environment Service
-      participant 1PSvc as 1Password Service
-      participant 1P as 1Password API
+## 🛡️ Security Features
 
-      Note over User, 1P: Extension Startup Flow
+- **Service Account Tokens**: Stored securely in VS Code's secret storage (not in your settings file!)
+- **Vault Isolation**: Each project can use its own vault
+- **Prefix Support**: Add prefixes like `myproject_` to avoid naming conflicts
+- **Local Override**: Some variables can stay local-only (add them to `.gitignore` patterns)
 
-      User->>Ext: VS Code starts extension
-      Ext->>EnvSvc: initialize()
-      EnvSvc->>1PSvc: initialize()
-      Note over 1PSvc: No API calls - just creates client
+## 🤝 Contributing
 
-      Ext->>EnvView: new EnvironmentViewProvider()
-      Note over EnvView: Constructor - no API calls
+Found a bug? Want a feature? We'd love your help!
 
-      Note over Ext: Tree view registered - may trigger getChildren()
-      EnvView->>EnvView: getChildren() → getRootItems()
-      Note over EnvView: Shows "⏳ Loading..." if not initialized
+1. **Issues**: [Report bugs or request features](https://github.com/jimseiwert/devorb/issues)
+2. **Development**:
+   ```bash
+   git clone https://github.com/jimseiwert/devorb.git
+   cd devorb
+   npm install
+   code .
+   # Press F5 to run the extension in development mode
+   ```
+3. **Pull Requests**: Always welcome! Please include tests if adding new features.
 
-      Note over User, 1P: Delayed Initialization (1 second)
+### Development Setup
+- Node.js 16+
+- VS Code 1.74+
+- TypeScript knowledge helpful but not required
 
-      Ext->>EnvView: initialize() [after 1s delay]
-      EnvView->>EnvView: findEnvironmentFiles()
-      EnvView->>EnvView: buildLocalVariablesSet()
-      Note over EnvView: Local operations only - no API calls
-      EnvView->>EnvView: _onDidChangeTreeData.fire()
+## 📝 Requirements
 
-      Note over User, 1P: Remote Data Loading (5 second delay)
+- **VS Code**: Version 1.74.0 or newer
+- **1Password Account**: Personal or business plan
+- **Service Account**: With access to a DevOrb vault
+- **Internet Connection**: For syncing (obviously! 🌐)
 
-      Ext->>EnvView: loadRemoteDataAndSetupWatchers() [after 5s delay]
-      EnvView->>EnvSvc: getRemoteSecrets()
-      EnvSvc->>1PSvc: getEnvironmentSecrets()
+## 🎉 Release Notes
 
-      Note over 1PSvc, 1P: Core API Call Sequence
+### 1.0.0 - The "Finally Ready for Prime Time" Release
+- 🎯 Full 1Password integration with service account support
+- 🔄 Automatic environment file detection and syncing
+- 🎨 Beautiful tree view showing sync status
+- ⚡ Smart auto-sync with debouncing (no more spam!)
+- 🛡️ Secure token storage in VS Code's secret storage
+- 📁 Multi-project support with optional prefixes
+- 🔧 Comprehensive settings UI
+- 🎮 Full command palette integration
+- ⌨️ Keyboard shortcuts for power users
+- 🖱️ Context menu integration for .env files
 
-      1PSvc->>1PSvc: ensureDevOrbVault()
-      alt Vault ID configured
-          Note over 1PSvc: Return cached/configured vault ID - NO API CALL
-      else No vault configured
-          1PSvc->>1P: vaults.list() [rate limited, 3s gap]
-          1P-->>1PSvc: vault list
-          1PSvc->>1PSvc: find "DevOrb" vault or update config
-      end
+---
 
-      1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
-      1P-->>1PSvc: all items in vault
+**Made with lots of ☕ by [Jim Seiwert](https://github.com/jimseiwert)**
 
-      1PSvc->>1PSvc: filter items (devorb tag + active state)
-
-      Note over 1PSvc, 1P: Parallel Detail Fetching
-
-      par Item 1
-          1PSvc->>1P: items.get(vaultId, item1) [rate limited]
-          1P-->>1PSvc: item1 details
-      and Item 2
-          1PSvc->>1P: items.get(vaultId, item2) [rate limited]
-          1P-->>1PSvc: item2 details
-      and Item N
-          1PSvc->>1P: items.get(vaultId, itemN) [rate limited]
-          1P-->>1PSvc: itemN details
-      end
-
-      1PSvc->>1PSvc: repository filtering + caching
-      1PSvc-->>EnvSvc: filtered secrets array
-      EnvSvc-->>EnvView: RemoteSecret[]
-
-      EnvView->>EnvView: setupFileWatcher()
-      EnvView->>EnvView: _onDidChangeTreeData.fire()
-
-      Note over User, 1P: User-Triggered Operations
-
-      User->>Ext: Select Vault command
-      Ext->>EnvSvc: getVaults()
-      EnvSvc->>1PSvc: getVaults()
-      1PSvc->>1P: vaults.list() [rate limited, 3s gap]
-      1P-->>1PSvc: vault list
-      1PSvc-->>Ext: vault options
-
-      User->>Ext: Update secret value
-      Ext->>EnvSvc: updateSecretValue(itemId, newValue)
-      EnvSvc->>1PSvc: updateSecretValue()
-      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
-      1PSvc->>1P: items.get(vaultId, itemId) [rate limited, 3s gap]
-      1P-->>1PSvc: current item
-      1PSvc->>1P: items.put(updatedItem) [rate limited, 3s gap]
-      1P-->>1PSvc: success
-
-      User->>Ext: Create new secret
-      Ext->>EnvSvc: syncSingleVariable()
-      EnvSvc->>1PSvc: createOrUpdateSecret()
-      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
-      1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
-      1P-->>1PSvc: existing items
-      1PSvc->>1PSvc: check for duplicates (local processing)
-      1PSvc->>1P: items.create(newItem) [rate limited, 3s gap]
-      1P-->>1PSvc: created item
-
-      User->>Ext: Delete secret
-      Ext->>EnvSvc: deleteSecret()
-      EnvSvc->>1PSvc: deleteSecret()
-      1PSvc->>1PSvc: ensureDevOrbVault() [cached - no API call]
-      1PSvc->>1P: items.list(vaultId) [rate limited, 3s gap]
-      1P-->>1PSvc: all items
-      1PSvc->>1PSvc: find item to delete (local processing)
-      1PSvc->>1P: items.delete(vaultId, itemId) [rate limited, 3s gap]
-      1P-->>1PSvc: success
-
-      Note over User, 1P: File Change Auto-Sync
-
-      User->>+Ext: Edits .env file
-      Ext->>EnvView: file watcher triggers
-      EnvView->>EnvView: debouncedRefresh() [1s delay]
-      EnvView->>EnvView: refresh()
-      EnvView->>EnvSvc: getRemoteSecrets() [uses cache if fresh]
-      Note over EnvView: May trigger full refresh cycle if cache expired
-
-      Note over User, 1P: Rate Limiting & Circuit Breaker
-
-      1PSvc->>1P: Any API call
-      alt Rate limit exceeded
-          1P-->>1PSvc: 429 Rate Limit Error
-          1PSvc->>1PSvc: Open circuit breaker (30s)
-          1PSvc->>1PSvc: All future calls rejected for 30s
-      else Normal response
-          1P-->>1PSvc: Success
-          1PSvc->>1PSvc: 3s minimum gap before next call
-      end
-```      
+*P.S. - If this extension saves you time, consider starring the repo! It makes us happy and helps other developers find it. ⭐*

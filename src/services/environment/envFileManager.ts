@@ -2,12 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createClient, Client, Item, ItemCreateParams, ItemCategory, ItemFieldType } from '@1password/sdk';
-
-export interface EnvFile {
-  filePath: string;
-  lastModified: Date;
-  content: string;
-}
+import { EnvFile } from '../../types';
 
 export class EnvFileManager {
   private client: Client | null = null;
@@ -270,7 +265,15 @@ export class EnvFileManager {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) return [];
 
-    const envFiles = await vscode.workspace.findFiles('**/.env*', '**/node_modules/**');
+    // Find all local .env files (both .env* and *.env patterns)
+    const dotPrefixFiles = await vscode.workspace.findFiles('**/.env*', '**/node_modules/**');
+    const dotSuffixFiles = await vscode.workspace.findFiles('**/*.env', '**/node_modules/**');
+
+    // Combine and deduplicate
+    const allFiles = [...dotPrefixFiles, ...dotSuffixFiles];
+    const envFiles = allFiles.filter((file, index, arr) =>
+      arr.findIndex(f => f.fsPath === file.fsPath) === index
+    );
     return envFiles.map(file => file.fsPath);
   }
 
