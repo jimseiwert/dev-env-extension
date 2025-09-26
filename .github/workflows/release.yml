@@ -42,7 +42,7 @@ jobs:
       run: npm run package
 
     - name: Install semantic-release
-      run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git
+      run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git conventional-changelog-conventionalcommits
 
     - name: Generate commit message based on branch/PR
       id: commit_type
