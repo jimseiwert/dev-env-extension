@@ -10,12 +10,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jimseiwert/devorb.git"
+    "url": "https://github.com/jimseiwert/dev-orb-extension.git"
   },
   "bugs": {
-    "url": "https://github.com/jimseiwert/devorb/issues"
+    "url": "https://github.com/jimseiwert/dev-orb-extension/issues"
   },
-  "homepage": "https://github.com/jimseiwert/devorb#readme",
+  "homepage": "https://github.com/jimseiwert/dev-orb-extension#readme",
   "keywords": [
     "developer",
     "productivity",

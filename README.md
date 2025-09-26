@@ -93,7 +93,7 @@ Found a bug? Want a feature? We'd love your help!
 1. **Issues**: [Report bugs or request features](https://github.com/jimseiwert/devorb/issues)
 2. **Development**:
    ```bash
-   git clone https://github.com/jimseiwert/devorb.git
+   git clone https://github.com/jimseiwert/dev-orb-extension.git
    cd devorb
    npm install
    code .
