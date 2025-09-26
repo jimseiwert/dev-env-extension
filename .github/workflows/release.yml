@@ -44,42 +44,47 @@ jobs:
     - name: Install semantic-release
       run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git
 
-    - name: Create .releaserc.json
+    - name: Generate commit message based on branch/PR
+      id: commit_type
       run: |
-        cat > .releaserc.json << 'EOF'
-        {
-          "branches": ["main"],
-          "plugins": [
-            "@semantic-release/commit-analyzer",
-            "@semantic-release/release-notes-generator",
-            "@semantic-release/changelog",
-            [
-              "@semantic-release/npm",
-              {
-                "npmPublish": false
-              }
-            ],
-            [
-              "@semantic-release/git",
-              {
-                "assets": ["package.json", "CHANGELOG.md"],
-                "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
-              }
-            ],
-            [
-              "@semantic-release/github",
-              {
-                "assets": [
-                  {
-                    "path": "*.vsix",
-                    "label": "VS Code Extension"
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-        EOF
+        # Get the latest commit message (the merge commit)
+        COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+        echo "Original commit: $COMMIT_MSG"
+
+        # Extract branch name from merge commit if it exists
+        if [[ $COMMIT_MSG =~ Merge\ pull\ request.*from.*/(.*) ]]; then
+          BRANCH_NAME="${BASH_REMATCH[1]}"
+          echo "Branch name: $BRANCH_NAME"
+
+          # Determine commit type based on branch prefix
+          if [[ $BRANCH_NAME =~ ^feature/.* ]] || [[ $BRANCH_NAME =~ ^feat/.* ]]; then
+            COMMIT_TYPE="feat"
+          elif [[ $BRANCH_NAME =~ ^fix/.* ]] || [[ $BRANCH_NAME =~ ^bugfix/.* ]] || [[ $BRANCH_NAME =~ ^hotfix/.* ]]; then
+            COMMIT_TYPE="fix"
+          elif [[ $BRANCH_NAME =~ ^docs/.* ]]; then
+            COMMIT_TYPE="docs"
+          elif [[ $BRANCH_NAME =~ ^refactor/.* ]]; then
+            COMMIT_TYPE="refactor"
+          elif [[ $BRANCH_NAME =~ ^test/.* ]]; then
+            COMMIT_TYPE="test"
+          elif [[ $BRANCH_NAME =~ ^chore/.* ]]; then
+            COMMIT_TYPE="chore"
+          else
+            # Default to patch for any other changes
+            COMMIT_TYPE="fix"
+          fi
+
+          # Create new conventional commit message
+          NEW_COMMIT_MSG="$COMMIT_TYPE: ${COMMIT_MSG#*\#*}"
+          NEW_COMMIT_MSG="${NEW_COMMIT_MSG% (*}"  # Remove PR number if present
+
+          echo "New commit message: $NEW_COMMIT_MSG"
+
+          # Amend the last commit with conventional format
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit --amend -m "$NEW_COMMIT_MSG"
+        fi
 
     - name: Release
       env:
